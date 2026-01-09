@@ -412,9 +412,9 @@ const App = () => {
             toastOptions={{
               duration: 4000,
               iconTheme: { primary: "#EF4444", secondary: "#fff" },
-            },
-          }}
-        />
+            }}
+          />
+        
 
         <BackButton />
 
@@ -441,7 +441,7 @@ const App = () => {
 
         <Routes>
           <Route
-            path="/landing"
+            path="/"
             element={
               <Suspense fallback={<PostSkeleton />}>
                 <Landing />
@@ -457,39 +457,19 @@ const App = () => {
             }
           />
 
-          <BackButton />
-
-          <Routes>
-            <Route
-              path="/landing"
-              element={
+          <Route
+            path="/home/*"
+            element={
+              <MainLayout
+                activeTab={activeTab}
+                setActiveTab={setActiveTab}
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+              >
                 <Suspense fallback={<PostSkeleton />}>
-                  <Landing />
-                </Suspense>
-              }
-            />
-            <Route
-              path="/learning"
-              element={
-                <Suspense fallback={<PostSkeleton />}>
-                  <LearningMode />
-                </Suspense>
-              }
-            />
-
-            <Route
-              path="/*"
-              element={
-                <MainLayout
-                  activeTab={activeTab}
-                  setActiveTab={setActiveTab}
-                  searchQuery={searchQuery}
-                  setSearchQuery={setSearchQuery}
-                >
-                  <Suspense fallback={<PostSkeleton />}>
-                    <Routes>
+                  <Routes>
                       <Route
-                        path="/"
+                        path=""
                         element={
                           <Home
                             likedPosts={likedPosts}
@@ -504,33 +484,33 @@ const App = () => {
                           />
                         }
                       />
-                      <Route path="/reels" element={<Reels />} />
-                      <Route path="/create-post" element={<CreatePost />} />
-                      <Route path="/search" element={<SearchResults />} />
+                      <Route path="reels" element={<Reels />} />
+                      <Route path="create-post" element={<CreatePost />} />
+                      <Route path="search" element={<SearchResults />} />
                       <Route
-                        path="/notifications"
+                        path="notifications"
                         element={<NotificationCenter />}
                       />
                       <Route
-                        path="/notifications/preferences"
+                        path="notifications/preferences"
                         element={<NotificationPreferences />}
                       />
-                      <Route path="/contact" element={<ContactUs />} />
+                      <Route path="contact" element={<ContactUs />} />
                       <Route
-                        path="/certificate"
+                        path="certificate"
                         element={<CertificatePage />}
                       />
                       <Route
-                        path="/assessment"
+                        path="assessment"
                         element={<GamifiedAssessmentPage />}
                       />
-                      <Route path="/courses" element={<CourseDiscovery />} />
+                      <Route path="courses" element={<CourseDiscovery />} />
                       <Route
-                        path="/courses-landing"
+                        path="courses-landing"
                         element={<CoursesLanding />}
                       />
                       <Route
-                        path="/advanced-syllabus"
+                        path="advanced-syllabus"
                         element={<AdvancedSyllabusPage />}
                       />
                     </Routes>
@@ -544,7 +524,7 @@ const App = () => {
           <InstallPWA />
           <OfflineIndicator />
 
-          <style jsx global>{`
+          <style>{`
             .scrollbar-hide::-webkit-scrollbar {
               display: none;
             }
@@ -558,62 +538,45 @@ const App = () => {
               background-clip: padding-box, border-box;
               background-origin: padding-box, border-box;
             }
-
-        <style jsx global>{`
-          .scrollbar-hide::-webkit-scrollbar {
-            display: none;
-          }
-          .scrollbar-hide {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-          }
-          .border-gradient-to-r {
-            background: linear-gradient(to right, #ec4899, #8b5cf6, #f97316);
-            border: 2px solid transparent;
-            background-clip: padding-box, border-box;
-            background-origin: padding-box, border-box;
-          }
-          
-          /* Cursor Trail Styles */
-          .cursor-trail-dot {
-            filter: blur(0.5px);
-            mix-blend-mode: screen;
-          }
-          
-          /* Reduce trail on mobile/touch devices */
-          @media (hover: none) and (pointer: coarse) {
+            
+            /* Cursor Trail Styles */
             .cursor-trail-dot {
-              display: none;
+              filter: blur(0.5px);
+              mix-blend-mode: screen;
             }
-          }
-          
-          /* Performance optimization */
-          .cursor-trail-dot {
-            contain: layout style paint;
-          }
-          
-          /* PWA Animation */
-          @keyframes slide-down {
-            from {
-              transform: translate(-50%, -100%);
-              opacity: 0;
+            
+            /* Reduce trail on mobile/touch devices */
+            @media (hover: none) and (pointer: coarse) {
+              .cursor-trail-dot {
+                display: none;
+              }
+            }
+            
+            /* Performance optimization */
+            .cursor-trail-dot {
+              contain: layout style paint;
+            }
+            
+            /* PWA Animation */
+            @keyframes slide-down {
+              from {
+                transform: translate(-50%, -100%);
+                opacity: 0;
+              }
             }
             .animate-slide-down {
               animation: slide-down 0.3s ease-out;
             }
-          }
-          .animate-slide-down {
-            animation: slide-down 0.3s ease-out;
-          }
-          
-          /* Reduce motion preference */
-          @media (prefers-reduced-motion: reduce) {
-            .cursor-trail-dot {
-              transition: none !important;
-              animation: none !important;
+            
+            /* Reduce motion preference */
+            @media (prefers-reduced-motion: reduce) {
+              .cursor-trail-dot {
+                transition: none !important;
+                animation: none !important;
+              }
             }
-          }
-        `}</style>
+          `}</style>
+        </NotificationProvider>
       </ErrorBoundary>
     </ErrorProvider>
   );
