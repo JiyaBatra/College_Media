@@ -101,6 +101,22 @@ export const searchApi = {
   getTrending: () => apiClient.get('/search/trending'),
 };
 
+// Collections endpoints
+export const collectionsApi = {
+  getAll: () => apiClient.get('/collections'),
+  getById: (id) => apiClient.get(`/collections/${id}`),
+  create: (data) => apiClient.post('/collections', data),
+  update: (id, data) => apiClient.put(`/collections/${id}`, data),
+  delete: (id) => apiClient.delete(`/collections/${id}`),
+  addPost: (collectionId, postId) => 
+    apiClient.post(`/collections/${collectionId}/posts`, { postId }),
+  removePost: (collectionId, postId) => 
+    apiClient.delete(`/collections/${collectionId}/posts/${postId}`),
+  getPosts: (collectionId, params) => 
+    apiClient.get(`/collections/${collectionId}/posts`, { params }),
+  togglePrivacy: (id) => apiClient.put(`/collections/${id}/privacy`),
+};
+
 // Export all APIs
 export default {
   auth: authApi,
@@ -110,4 +126,5 @@ export default {
   upload: uploadApi,
   notifications: notificationsApi,
   search: searchApi,
+  collections: collectionsApi,
 };

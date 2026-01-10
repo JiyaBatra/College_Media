@@ -28,6 +28,8 @@ const Landing = lazy(() => import("../pages/Landing.jsx"));
 const NotificationCenter = lazy(() => import("../components/NotificationCenter.jsx"));
 const NotificationPreferences = lazy(() => import("../components/NotificationPreferences.jsx"));
 const SearchResults = lazy(() => import("../pages/SearchResults.jsx"));
+const Collections = lazy(() => import("../pages/Collections.jsx"));
+const CollectionDetail = lazy(() => import("../pages/CollectionDetail.jsx"));
 const Settings = lazy(() => import("../pages/Settings.jsx"));
 const Profile = lazy(() => import("../pages/Profile.jsx"));
 const Messages = lazy(() => import("../pages/Messages.jsx"));
@@ -133,6 +135,24 @@ const AppRoutes = ({
           element={
             <LazyWrapper>
               <NotificationPreferences />
+            </LazyWrapper>
+          }
+        />
+
+        <Route
+          path="collections"
+          element={
+            <LazyWrapper>
+              <Collections />
+            </LazyWrapper>
+          }
+        />
+
+        <Route
+          path="collections/:collectionId"
+          element={
+            <LazyWrapper>
+              <CollectionDetail />
             </LazyWrapper>
           }
         />
