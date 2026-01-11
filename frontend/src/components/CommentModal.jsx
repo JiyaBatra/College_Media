@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { commentsApi } from "../api/endpoints";
 import { useTheme } from "../context/ThemeContext";
+import useFocusTrap from "../hooks/useFocusTrap";
 
 const CommentModal = ({ isOpen, onClose, postId, commentCount }) => {
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState("");
   const [loading, setLoading] = useState(false);
   const { theme } = useTheme();
+  const { modalRef } = useFocusTrap(isOpen, onClose);
 
   // This effect runs every time the postId changes, 
   // ensuring comments stay synced with the visible reel.
@@ -48,20 +50,23 @@ const CommentModal = ({ isOpen, onClose, postId, commentCount }) => {
   if (!isOpen) return null;
 
   return (
-    <div 
-      className={`fixed top-0 right-0 z-[1000] h-full w-full lg:w-[450px] shadow-2xl transition-transform duration-300 ease-in-out flex flex-col ${
-        isOpen ? 'translate-x-0' : 'translate-x-full'
-      } ${theme === 'dark' ? 'bg-slate-900 text-white' : 'bg-white text-gray-900'}`}
+    <div
+      ref={modalRef}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-title"
+      className={`fixed top-0 right-0 z-[1000] h-full w-full lg:w-[450px] shadow-2xl transition-transform duration-300 ease-in-out flex flex-col ${isOpen ? 'translate-x-0' : 'translate-x-full'
+        } ${theme === 'dark' ? 'bg-slate-900 text-white' : 'bg-white text-gray-900'}`}
     >
       {/* Header */}
       <div className="flex justify-between items-center p-6 border-b dark:border-slate-800 border-gray-100">
         <div>
-          <h3 className="text-xl font-bold">Comments</h3>
+          <h3 id="modal-title" className="text-xl font-bold">Comments</h3>
           <p className="text-sm text-gray-500">{commentCount} responses</p>
         </div>
         <button onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-full">
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
       </div>
@@ -96,9 +101,8 @@ const CommentModal = ({ isOpen, onClose, postId, commentCount }) => {
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
             placeholder="Write a comment..."
-            className={`w-full p-4 h-24 rounded-2xl resize-none outline-none border-none text-sm ${
-              theme === 'dark' ? 'bg-slate-800 text-white' : 'bg-gray-100 text-gray-900'
-            }`}
+            className={`w-full p-4 h-24 rounded-2xl resize-none outline-none border-none text-sm ${theme === 'dark' ? 'bg-slate-800 text-white' : 'bg-gray-100 text-gray-900'
+              }`}
           />
           <div className="flex justify-end">
             <button type="submit" disabled={!newComment.trim()} className="bg-purple-600 text-white px-8 py-2.5 rounded-full font-bold transition-all disabled:opacity-30">
