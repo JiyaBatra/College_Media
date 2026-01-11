@@ -5,6 +5,7 @@ import { accountApi } from "../api/endpoints";
 import FontSizeModal from "../components/FontSizeModal";
 import ThemeModal from "../components/ThemeModal";
 import NotificationPreferencesModal from "../components/NotificationPreferencesModal";
+import BlockedUsersModal from "../components/BlockedUsersModal";
 
 // import { useTheme } from '../context/ThemeContext';
 
@@ -27,6 +28,7 @@ const Settings = () => {
   const [showFontSizeModal, setShowFontSizeModal] = useState(false);
   const [showThemeModal, setShowThemeModal] = useState(false);
   const [showNotificationPreferences, setShowNotificationPreferences] = useState(false);
+  const [showBlockedUsers, setShowBlockedUsers] = useState(false);
   const [passwordData, setPasswordData] = useState({
     currentPassword: "",
     newPassword: "",
@@ -449,6 +451,7 @@ const Settings = () => {
           icon: "🚫",
           label: "Blocked Users",
           description: "Manage blocked accounts",
+          onClick: () => setShowBlockedUsers(true),
           type: "link",
         },
         {
@@ -1000,6 +1003,11 @@ const Settings = () => {
       <NotificationPreferencesModal
         isOpen={showNotificationPreferences}
         onClose={() => setShowNotificationPreferences(false)}
+      />
+
+      <BlockedUsersModal
+        isOpen={showBlockedUsers}
+        onClose={() => setShowBlockedUsers(false)}
       />
     </div>
   );

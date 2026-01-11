@@ -62,6 +62,10 @@ const userSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
   }],
+  blockedUsers: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }],
   notificationSettings: {
     email: {
       type: Boolean,
@@ -172,6 +176,31 @@ userSchema.methods.restore = async function() {
   this.scheduledDeletionDate = null;
   this.isActive = true;
   return this.save();
+};
+
+// Method to block a user
+userSchema.methods.blockUser = async function(userIdToBlock) {
+  if (!this.blockedUsers.includes(userIdToBlock)) {
+    this.blockedUsers.push(userIdToBlock);
+    
+    // Also remove from followers/following if exists
+    this.followers = this.followers.filter(id => id.toString() !== userIdToBlock.toString());
+    this.following = this.following.filter(id => id.toString() !== userIdToBlock.toString());
+    
+    return this.save();
+  }
+  return this;
+};
+
+// Method to unblock a user
+userSchema.methods.unblockUser = async function(userIdToUnblock) {
+  this.blockedUsers = this.blockedUsers.filter(id => id.toString() !== userIdToUnblock.toString());
+  return this.save();
+};
+
+// Method to check if user is blocked
+userSchema.methods.isUserBlocked = function(userId) {
+  return this.blockedUsers.some(id => id.toString() === userId.toString());
 };
 
 module.exports = mongoose.model('User', userSchema);

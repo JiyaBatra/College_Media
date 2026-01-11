@@ -239,6 +239,73 @@ const updateOne = (query, updateData) => {
   return true;
 };
 
+// Block a user
+const blockUser = (userId, userIdToBlock) => {
+  const users = readUsers();
+  const userIndex = users.findIndex(user => user._id === userId);
+  
+  if (userIndex === -1) {
+    return null;
+  }
+  
+  // Initialize blockedUsers array if it doesn't exist
+  if (!users[userIndex].blockedUsers) {
+    users[userIndex].blockedUsers = [];
+  }
+  
+  // Add to blocked list if not already blocked
+  if (!users[userIndex].blockedUsers.includes(userIdToBlock)) {
+    users[userIndex].blockedUsers.push(userIdToBlock);
+    
+    // Remove from followers/following if exists
+    if (users[userIndex].followers) {
+      users[userIndex].followers = users[userIndex].followers.filter(id => id !== userIdToBlock);
+    }
+    if (users[userIndex].following) {
+      users[userIndex].following = users[userIndex].following.filter(id => id !== userIdToBlock);
+    }
+    
+    users[userIndex].updatedAt = new Date().toISOString();
+    writeUsers(users);
+  }
+  
+  return users[userIndex];
+};
+
+// Unblock a user
+const unblockUser = (userId, userIdToUnblock) => {
+  const users = readUsers();
+  const userIndex = users.findIndex(user => user._id === userId);
+  
+  if (userIndex === -1) {
+    return null;
+  }
+  
+  // Initialize blockedUsers array if it doesn't exist
+  if (!users[userIndex].blockedUsers) {
+    users[userIndex].blockedUsers = [];
+  }
+  
+  // Remove from blocked list
+  users[userIndex].blockedUsers = users[userIndex].blockedUsers.filter(id => id !== userIdToUnblock);
+  users[userIndex].updatedAt = new Date().toISOString();
+  
+  writeUsers(users);
+  
+  return users[userIndex];
+};
+
+// Check if user is blocked
+const isUserBlocked = (userId, targetUserId) => {
+  const user = findById(userId);
+  
+  if (!user || !user.blockedUsers) {
+    return false;
+  }
+  
+  return user.blockedUsers.includes(targetUserId);
+};
+
 module.exports = {
   findByEmail,
   findByUsername,
@@ -252,5 +319,8 @@ module.exports = {
   softDelete,
   restore,
   permanentDelete,
-  updateOne
+  updateOne,
+  blockUser,
+  unblockUser,
+  isUserBlocked
 };

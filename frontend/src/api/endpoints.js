@@ -47,6 +47,10 @@ export const usersApi = {
   getFollowers: (id, params) => apiClient.get(`/users/${id}/followers`, { params }),
   getFollowing: (id, params) => apiClient.get(`/users/${id}/following`, { params }),
   search: (query, params) => apiClient.get('/users/search', { params: { q: query, ...params } }),
+  getBlockedUsers: () => apiClient.get('/users/blocked'),
+  blockUser: (userId) => apiClient.post(`/users/${userId}/block`),
+  unblockUser: (userId) => apiClient.delete(`/users/${userId}/block`),
+  isUserBlocked: (userId) => apiClient.get(`/users/${userId}/is-blocked`),
 };
 
 // Upload endpoints
