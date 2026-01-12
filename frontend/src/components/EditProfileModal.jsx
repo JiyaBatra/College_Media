@@ -22,12 +22,28 @@ const EditProfileModal = ({ isOpen, onClose }) => {
 
   useEffect(() => {
     if (isOpen) {
+      // Initialize with context user data immediately
+      if (contextUser) {
+        const profileData = {
+          firstName: contextUser.firstName || "",
+          lastName: contextUser.lastName || "",
+          username: contextUser.username || "",
+          email: contextUser.email || "",
+          bio: contextUser.bio || "",
+          profilePicture: contextUser.profilePicture || "",
+          profileBanner: contextUser.profileBanner || "",
+        };
+        setFormData(profileData);
+        setOriginalData(profileData);
+      }
+      
+      // Then fetch latest from API
       fetchProfile();
       setError("");
       setSuccessMessage("");
       setValidationErrors({});
     }
-  }, [isOpen]);
+  }, [isOpen, contextUser]);
 
   const fetchProfile = async () => {
     setLoading(true);
@@ -49,7 +65,25 @@ const EditProfileModal = ({ isOpen, onClose }) => {
       }
     } catch (err) {
       console.error("Failed to fetch profile:", err);
-      setError("Failed to load profile data");
+      
+      // Fallback to context user data
+      if (contextUser) {
+        console.log("Using context user data as fallback");
+        const profileData = {
+          firstName: contextUser.firstName || "",
+          lastName: contextUser.lastName || "",
+          username: contextUser.username || "",
+          email: contextUser.email || "",
+          bio: contextUser.bio || "",
+          profilePicture: contextUser.profilePicture || "",
+          profileBanner: contextUser.profileBanner || "",
+        };
+        setFormData(profileData);
+        setOriginalData(profileData);
+        setError(""); // Clear error since we have fallback data
+      } else {
+        setError("Failed to load profile data");
+      }
     } finally {
       setLoading(false);
     }
@@ -103,11 +137,18 @@ const EditProfileModal = ({ isOpen, onClose }) => {
     setSuccessMessage("");
 
     try {
+      console.log("Updating profile with data:", formData);
       const response = await accountApi.updateProfile(formData);
+      console.log("Update profile response:", response);
 
-      if (response.success) {
+      // apiClient already unwraps response.data, so response is the data object
+      // Backend returns { success: true, message: '...', data: user }
+      if (response && (response.success || response._id)) {
+        // If response has success field, use response.data, otherwise response is the user object
+        const userData = response.data || response;
+        
         // Update user state in AuthContext so changes reflect everywhere
-        setUser(response.data);
+        setUser(userData);
         
         setSuccessMessage("Profile updated successfully!");
         setOriginalData(formData);
@@ -115,13 +156,14 @@ const EditProfileModal = ({ isOpen, onClose }) => {
         setTimeout(() => {
           setSuccessMessage("");
           onClose();
-        }, 2000);
+        }, 1500);
       } else {
+        console.error("Update failed:", response);
         setError(response?.message || "Failed to update profile.");
       }
     } catch (err) {
       console.error("Failed to update profile:", err);
-      setError(err.message || "Failed to update profile. Please try again.");
+      setError(err?.response?.data?.message || err.message || "Failed to update profile. Please try again.");
     } finally {
       setSaving(false);
     }
