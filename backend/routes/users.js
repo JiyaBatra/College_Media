@@ -13,6 +13,8 @@ const logger = require('../utils/logger');
 const { apiLimiter } = require('../middleware/rateLimitMiddleware');
 
 const { isValidName, isValidBio, isValidEmail } = require('../utils/validators');
+const { checkPermission, PERMISSIONS } = require('../middleware/rbacMiddleware');
+const { parsePaginationParams, paginateQuery } = require('../utils/pagination');
 const { cacheMiddleware, invalidateCache } = require('../middleware/cacheMiddleware');
 
 const JWT_SECRET =
@@ -474,6 +476,131 @@ router.delete('/profile-picture', verifyToken, invalidateCache(['user-profile::u
       next(err);
     }
   }
-);
+});
+
+// ADMIN/MODERATOR ROUTES
+
+/**
+ * @route   GET /api/users
+ * @desc    Get all users (paginated)
+ * @access  Private (Admin/Moderator)
+ */
+router.get('/', verifyToken, checkPermission(PERMISSIONS.VIEW_USERS), async (req, res, next) => {
+  try {
+    const dbConnection = req.app.get('dbConnection');
+    const useMongoDB = dbConnection?.useMongoDB;
+
+    if (useMongoDB) {
+      const { page, limit, skip, sort } = parsePaginationParams(req.query);
+
+      const query = { isDeleted: false };
+      // Optional: Filter by role if provided
+      if (req.query.role) query.role = req.query.role;
+      // Optional: Search by username/name
+      if (req.query.search) {
+        query.$text = { $search: req.query.search };
+      }
+
+      const result = await paginateQuery(UserMongo, query, {
+        page,
+        limit,
+        sort,
+        select: '-password'
+      });
+
+      res.json({
+        success: true,
+        data: result.data,
+        pagination: result.pagination,
+        message: 'Users retrieved successfully'
+      });
+    } else {
+      // Mock DB implementation (simple list)
+      const users = await UserMock.findAll(); // Assuming this exists or returns mocked list
+      const publicUsers = users.map(u => {
+        const { password, ...rest } = u;
+        return rest;
+      });
+
+      res.json({
+        success: true,
+        data: publicUsers,
+        message: 'Users retrieved successfully (Mock)'
+      });
+    }
+  } catch (error) {
+    logger.error('Get users error:', error);
+    next(error);
+  }
+});
+
+/**
+ * @route   DELETE /api/users/:userId
+ * @desc    Delete a user (Admin only)
+ * @access  Private (Admin)
+ */
+router.delete('/:userId', verifyToken, checkPermission(PERMISSIONS.DELETE_USER), async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+    const dbConnection = req.app.get('dbConnection');
+    const useMongoDB = dbConnection?.useMongoDB;
+
+    if (useMongoDB) {
+      const user = await UserMongo.findById(userId);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          data: null,
+          message: 'User not found'
+        });
+      }
+
+      // Prevent deleting yourself or other admins (optional safeguard)
+      if (user._id.toString() === req.userId) {
+        return res.status(400).json({
+          success: false,
+          data: null,
+          message: 'Cannot delete your own admin account through this endpoint'
+        });
+      }
+
+      await user.softDelete('Deleted by Admin');
+
+      // Invalidate cache
+      await invalidateCache([`user-profile:${userId}`, `user-profile-public:${user.username}`])(req, res, () => { });
+
+      res.json({
+        success: true,
+        data: null,
+        message: 'User deleted successfully'
+      });
+    } else {
+      // Mock DB
+      const result = await UserMock.delete(userId);
+      if (!result) {
+        return res.status(404).json({
+          success: false,
+          data: null,
+          message: 'User not found'
+        });
+      }
+
+      res.json({
+        success: true,
+        data: null,
+        message: 'User deleted successfully'
+      });
+    }
+  } catch (error) {
+    logger.error('Delete user error:', error);
+    next(error);
+  }
+});
+
+// Create uploads directory if it doesn't exist
+const fs = require('fs');
+if (!fs.existsSync('uploads/')) {
+  fs.mkdirSync('uploads/');
+}
 
 module.exports = router;
