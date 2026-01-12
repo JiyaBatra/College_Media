@@ -10,7 +10,10 @@ const { isValidMessageContent, isValidURL, isValidObjectId } = require('../utils
 
 const { parsePaginationParams, paginateQuery, paginateArray } = require('../utils/pagination');
 const { cacheMiddleware, invalidateCache } = require('../middleware/cacheMiddleware');
+
 const cache = require('../utils/cache');
+const { checkPermission, PERMISSIONS } = require('../middleware/rbacMiddleware');
+const { hasPermission } = require('../config/roles');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 
@@ -396,8 +399,23 @@ router.delete('/:messageId', verifyToken, validateMessageId, checkValidation, in
         });
       }
 
-      // Only sender or receiver can delete
-      if (message.sender.toString() !== req.userId && message.receiver.toString() !== req.userId) {
+      // Obtain user role if not already present (verifyToken + fetch or middleware)
+      let userRole = req.userRole;
+      // If verifyToken doesn't attach role, we might need to fetch it or rely on a preceding middleware
+      // For now, let's fetch if missing, but ideally rbacMiddleware's checkRole or verifyToken handles this.
+      // Since we want to allow owner OR admin, we do a manual check here or use a flexible logic.
+      if (!userRole) {
+        const user = await UserMongo.findById(req.userId);
+        userRole = user ? user.role : 'student';
+      }
+
+      // Check if user is owner of the message
+      const isOwner = message.sender.toString() === req.userId || message.receiver.toString() === req.userId;
+
+      // Check if user has admin permission to delete any message
+      const canDeleteAny = hasPermission(userRole, PERMISSIONS.DELETE_ANY_MESSAGE);
+
+      if (!isOwner && !canDeleteAny) {
         return res.status(403).json({
           success: false,
           data: null,
@@ -427,6 +445,8 @@ router.delete('/:messageId', verifyToken, validateMessageId, checkValidation, in
       }
 
       if (message.sender !== req.userId && message.receiver !== req.userId) {
+        // Mock DB RBAC simulation (simplified)
+        // In a real scenario, we'd check the mock user's role too
         return res.status(403).json({
           success: false,
           data: null,
