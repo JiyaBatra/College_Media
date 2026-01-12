@@ -7,6 +7,7 @@ const UserMock = require('../mockdb/userDB');
 const MessageMongo = require('../models/Message');
 const MessageMock = require('../mockdb/messageDB');
 const { validateAccountDeletion, checkValidation } = require('../middleware/validationMiddleware');
+const logger = require('../utils/logger');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'college_media_secret_key';
 
@@ -43,10 +44,10 @@ const verifyToken = (req, res, next) => {
 router.delete('/', verifyToken, validateAccountDeletion, checkValidation, async (req, res) => {
   try {
     const { password, reason } = req.body;
-    console.log('Delete account request received:', { 
-      userId: req.userId, 
-      hasPassword: !!password, 
-      passwordLength: password?.length 
+    logger.info('Delete account request received:', {
+      userId: req.userId,
+      hasPassword: !!password,
+      passwordLength: password?.length
     });
     const dbConnection = req.app.get('dbConnection');
     const useMongoDB = dbConnection?.useMongoDB;
@@ -82,9 +83,9 @@ router.delete('/', verifyToken, validateAccountDeletion, checkValidation, async 
     }
 
     // Verify password
-    console.log('Verifying password for user:', user.email);
+    logger.info('Verifying password for user:', { email: user.email });
     const isPasswordValid = await bcrypt.compare(password, user.password);
-    console.log('Password verification result:', isPasswordValid);
+    logger.info('Password verification result:', { isPasswordValid });
     if (!isPasswordValid) {
       return res.status(401).json({
         success: false,
@@ -123,7 +124,7 @@ router.delete('/', verifyToken, validateAccountDeletion, checkValidation, async 
     }
 
     // Log deletion for audit
-    console.log(`User account deleted: ${req.userId} at ${new Date().toISOString()}`);
+    logger.info(`User account deleted: ${req.userId} at ${new Date().toISOString()}`);
 
     res.json({
       success: true,
@@ -134,7 +135,7 @@ router.delete('/', verifyToken, validateAccountDeletion, checkValidation, async 
       message: 'Account deletion initiated successfully'
     });
   } catch (error) {
-    console.error('Delete account error:', error);
+    logger.error('Delete account error:', error);
     res.status(500).json({
       success: false,
       data: null,
@@ -195,7 +196,7 @@ router.post('/restore', verifyToken, async (req, res) => {
     }
 
     // Log restoration for audit
-    console.log(`User account restored: ${req.userId} at ${new Date().toISOString()}`);
+    logger.info(`User account restored: ${req.userId} at ${new Date().toISOString()}`);
 
     res.json({
       success: true,
@@ -203,7 +204,7 @@ router.post('/restore', verifyToken, async (req, res) => {
       message: 'Account restored successfully'
     });
   } catch (error) {
-    console.error('Restore account error:', error);
+    logger.error('Restore account error:', error);
     res.status(500).json({
       success: false,
       data: null,
@@ -283,7 +284,7 @@ router.delete('/permanent', verifyToken, async (req, res) => {
     }
 
     // Log permanent deletion for audit
-    console.log(`User account permanently deleted: ${req.userId} at ${new Date().toISOString()}`);
+    logger.info(`User account permanently deleted: ${req.userId} at ${new Date().toISOString()}`);
 
     res.json({
       success: true,
@@ -291,7 +292,7 @@ router.delete('/permanent', verifyToken, async (req, res) => {
       message: 'Account permanently deleted'
     });
   } catch (error) {
-    console.error('Permanent delete error:', error);
+    logger.error('Permanent delete error:', error);
     res.status(500).json({
       success: false,
       data: null,
@@ -332,7 +333,7 @@ router.get('/deletion-status', verifyToken, async (req, res) => {
       scheduledDeletionDate: user.scheduledDeletionDate || null,
       deletionReason: user.deletionReason || null,
       canRestore: user.isDeleted && user.scheduledDeletionDate && new Date() < new Date(user.scheduledDeletionDate),
-      daysUntilPermanentDeletion: user.scheduledDeletionDate 
+      daysUntilPermanentDeletion: user.scheduledDeletionDate
         ? Math.ceil((new Date(user.scheduledDeletionDate) - new Date()) / (1000 * 60 * 60 * 24))
         : null
     };
@@ -343,7 +344,7 @@ router.get('/deletion-status', verifyToken, async (req, res) => {
       message: 'Deletion status retrieved successfully'
     });
   } catch (error) {
-    console.error('Get deletion status error:', error);
+    logger.error('Get deletion status error:', error);
     res.status(500).json({
       success: false,
       data: null,
@@ -389,7 +390,7 @@ router.post('/export-data', verifyToken, async (req, res) => {
       }).select('-deletedBy');
     } else {
       messages = await MessageMock.find({});
-      messages = messages.filter(m => 
+      messages = messages.filter(m =>
         m.sender === req.userId || m.receiver === req.userId
       );
     }
@@ -411,7 +412,7 @@ router.post('/export-data', verifyToken, async (req, res) => {
       message: 'Data exported successfully'
     });
   } catch (error) {
-    console.error('Export data error:', error);
+    logger.error('Export data error:', error);
     res.status(500).json({
       success: false,
       data: null,

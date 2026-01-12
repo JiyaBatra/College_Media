@@ -7,6 +7,7 @@ const UserMongo = require('../models/User');
 const UserMock = require('../mockdb/userDB');
 const { validateRegister, validateLogin, checkValidation } = require('../middleware/validationMiddleware');
 const { sendPasswordResetOTP } = require('../services/emailService');
+const logger = require('../utils/logger');
 const router = express.Router();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'college_media_secret_key';
@@ -43,21 +44,21 @@ const verifyToken = (req, res, next) => {
 router.post('/register', validateRegister, checkValidation, async (req, res, next) => {
   try {
     const { username, email, password, firstName, lastName } = req.body;
-    
+
     // Get database connection from app
     const dbConnection = req.app.get('dbConnection');
-    
+
     if (dbConnection && dbConnection.useMongoDB) {
       // Use MongoDB
-      const existingUser = await UserMongo.findOne({ 
-        $or: [{ email }, { username }] 
+      const existingUser = await UserMongo.findOne({
+        $or: [{ email }, { username }]
       });
-      
+
       if (existingUser) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           success: false,
           data: null,
-          message: 'User with this email or username already exists' 
+          message: 'User with this email or username already exists'
         });
       }
 
@@ -127,17 +128,17 @@ router.post('/register', validateRegister, checkValidation, async (req, res, nex
         });
       } catch (error) {
         if (error.message.includes('already exists')) {
-          return res.status(400).json({ 
+          return res.status(400).json({
             success: false,
             data: null,
-            message: error.message 
+            message: error.message
           });
         }
         throw error; // Re-throw other errors
       }
     }
   } catch (error) {
-    console.error('Registration error:', error);
+    logger.error('Registration error:', error);
     next(error); // Pass to error handler
   }
 });
@@ -146,28 +147,28 @@ router.post('/register', validateRegister, checkValidation, async (req, res, nex
 router.post('/login', validateLogin, checkValidation, async (req, res, next) => {
   try {
     const { email, password } = req.body;
-    
+
     // Get database connection from app
     const dbConnection = req.app.get('dbConnection');
-    
+
     if (dbConnection && dbConnection.useMongoDB) {
       // Use MongoDB
       const user = await UserMongo.findOne({ email });
       if (!user) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           success: false,
           data: null,
-          message: 'Invalid credentials' 
+          message: 'Invalid credentials'
         });
       }
 
       // Check password
       const isMatch = await bcrypt.compare(password, user.password);
       if (!isMatch) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           success: false,
           data: null,
-          message: 'Invalid credentials' 
+          message: 'Invalid credentials'
         });
       }
 
@@ -196,20 +197,20 @@ router.post('/login', validateLogin, checkValidation, async (req, res, next) => 
       // Use mock database
       const user = await UserMock.findByEmail(email);
       if (!user) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           success: false,
           data: null,
-          message: 'Invalid credentials' 
+          message: 'Invalid credentials'
         });
       }
 
       // Check password
       const isMatch = await bcrypt.compare(password, user.password);
       if (!isMatch) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           success: false,
           data: null,
-          message: 'Invalid credentials' 
+          message: 'Invalid credentials'
         });
       }
 
@@ -236,7 +237,7 @@ router.post('/login', validateLogin, checkValidation, async (req, res, next) => 
       });
     }
   } catch (error) {
-    console.error('Login error:', error);
+    logger.error('Login error:', error);
     next(error); // Pass to error handler
   }
 });
@@ -245,18 +246,18 @@ router.post('/login', validateLogin, checkValidation, async (req, res, next) => 
 router.post('/forgot-password', async (req, res, next) => {
   try {
     const { email } = req.body;
-    
+
     if (!email) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
         data: null,
-        message: 'Email is required' 
+        message: 'Email is required'
       });
     }
 
     // Get database connection from app
     const dbConnection = req.app.get('dbConnection');
-    
+
     let user;
     if (dbConnection && dbConnection.useMongoDB) {
       user = await UserMongo.findOne({ email });
@@ -268,38 +269,26 @@ router.post('/forgot-password', async (req, res, next) => {
     if (user) {
       // Generate 6-digit OTP
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      
+
       // Store OTP with expiration (10 minutes)
       otpStore.set(email, {
         otp,
         expiresAt: Date.now() + 10 * 60 * 1000, // 10 minutes
         userId: user._id || user.id
       });
-      
+
       // Try to send email if API key is configured
       if (process.env.RESEND_API_KEY && process.env.RESEND_API_KEY !== 'your_resend_api_key_here') {
         try {
           await sendPasswordResetOTP(email, otp);
-          console.log('✅ Password reset OTP sent to:', email);
+          logger.info(`Password reset OTP sent to: ${email}`);
         } catch (emailError) {
-          console.error('⚠️  Failed to send email, logging OTP instead:', emailError.message);
-          console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-          console.log('📧 PASSWORD RESET OTP (Development Mode)');
-          console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-          console.log('Email:', email);
-          console.log('OTP Code:', otp);
-          console.log('Expires in: 10 minutes');
-          console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+          logger.warn(`Failed to send email, logging OTP instead: ${emailError.message}`);
+          logger.info('PASSWORD RESET OTP (Development Mode)', { email, otp, expiresIn: '10 minutes' });
         }
       } else {
         // Development mode: Just log the OTP
-        console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.log('📧 PASSWORD RESET OTP (Development Mode)');
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.log('Email:', email);
-        console.log('OTP Code:', otp);
-        console.log('Expires in: 10 minutes');
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+        logger.info('PASSWORD RESET OTP (Development Mode)', { email, otp, expiresIn: '10 minutes' });
       }
     }
 
@@ -309,7 +298,7 @@ router.post('/forgot-password', async (req, res, next) => {
       message: 'If an account exists with this email, an OTP has been sent.'
     });
   } catch (error) {
-    console.error('Forgot password error:', error);
+    logger.error('Forgot password error:', error);
     next(error);
   }
 });
@@ -318,41 +307,41 @@ router.post('/forgot-password', async (req, res, next) => {
 router.post('/verify-otp', async (req, res, next) => {
   try {
     const { email, otp } = req.body;
-    
+
     if (!email || !otp) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
         data: null,
-        message: 'Email and OTP are required' 
+        message: 'Email and OTP are required'
       });
     }
 
     const storedData = otpStore.get(email);
-    
+
     if (!storedData) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
         data: null,
-        message: 'OTP not found or expired. Please request a new one.' 
+        message: 'OTP not found or expired. Please request a new one.'
       });
     }
 
     // Check if OTP is expired
     if (Date.now() > storedData.expiresAt) {
       otpStore.delete(email);
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
         data: null,
-        message: 'OTP has expired. Please request a new one.' 
+        message: 'OTP has expired. Please request a new one.'
       });
     }
 
     // Verify OTP
     if (storedData.otp !== otp) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
         data: null,
-        message: 'Invalid OTP. Please try again.' 
+        message: 'Invalid OTP. Please try again.'
       });
     }
 
@@ -364,14 +353,14 @@ router.post('/verify-otp', async (req, res, next) => {
     );
 
     // Don't delete OTP yet - will delete after password reset
-    
+
     res.json({
       success: true,
       data: { resetToken },
       message: 'OTP verified successfully'
     });
   } catch (error) {
-    console.error('Verify OTP error:', error);
+    logger.error('Verify OTP error:', error);
     next(error);
   }
 });
@@ -380,12 +369,12 @@ router.post('/verify-otp', async (req, res, next) => {
 router.post('/reset-password', async (req, res, next) => {
   try {
     const { resetToken, newPassword, email } = req.body;
-    
+
     if (!resetToken || !newPassword) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
         data: null,
-        message: 'Reset token and new password are required' 
+        message: 'Reset token and new password are required'
       });
     }
 
@@ -394,10 +383,10 @@ router.post('/reset-password', async (req, res, next) => {
     try {
       decoded = jwt.verify(resetToken, JWT_SECRET);
     } catch (err) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
         data: null,
-        message: 'Invalid or expired reset token' 
+        message: 'Invalid or expired reset token'
       });
     }
 
@@ -407,10 +396,10 @@ router.post('/reset-password', async (req, res, next) => {
 
     // Get database connection from app
     const dbConnection = req.app.get('dbConnection');
-    
+
     if (dbConnection && dbConnection.useMongoDB) {
-      await UserMongo.findByIdAndUpdate(decoded.userId, { 
-        password: hashedPassword 
+      await UserMongo.findByIdAndUpdate(decoded.userId, {
+        password: hashedPassword
       });
     } else {
       await UserMock.updatePassword(decoded.userId, hashedPassword);
@@ -427,7 +416,7 @@ router.post('/reset-password', async (req, res, next) => {
       message: 'Password has been reset successfully'
     });
   } catch (error) {
-    console.error('Reset password error:', error);
+    logger.error('Reset password error:', error);
     next(error);
   }
 });
@@ -439,7 +428,7 @@ router.post('/logout', async (req, res, next) => {
     // 1. Invalidate the refresh token in the database
     // 2. Add the access token to a blacklist (Redis recommended)
     // 3. Clear any server-side session data
-    
+
     // For now, we'll send a success response
     // The client will clear the token from localStorage
     res.json({
@@ -448,7 +437,7 @@ router.post('/logout', async (req, res, next) => {
       message: 'Logged out successfully'
     });
   } catch (error) {
-    console.error('Logout error:', error);
+    logger.error('Logout error:', error);
     next(error);
   }
 });
@@ -457,46 +446,46 @@ router.post('/logout', async (req, res, next) => {
 router.post('/change-password', verifyToken, async (req, res, next) => {
   try {
     const { currentPassword, newPassword } = req.body;
-    
+
     if (!currentPassword || !newPassword) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
         data: null,
-        message: 'Current password and new password are required' 
+        message: 'Current password and new password are required'
       });
     }
 
     // Validate new password strength
     if (newPassword.length < 6) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
         data: null,
-        message: 'New password must be at least 6 characters long' 
+        message: 'New password must be at least 6 characters long'
       });
     }
 
     // Get database connection from app
     const dbConnection = req.app.get('dbConnection');
-    
+
     let user;
     if (dbConnection && dbConnection.useMongoDB) {
       // Use MongoDB
       user = await UserMongo.findById(req.userId);
       if (!user) {
-        return res.status(404).json({ 
+        return res.status(404).json({
           success: false,
           data: null,
-          message: 'User not found' 
+          message: 'User not found'
         });
       }
     } else {
       // Use Mock DB
       user = await UserMock.findById(req.userId);
       if (!user) {
-        return res.status(404).json({ 
+        return res.status(404).json({
           success: false,
           data: null,
-          message: 'User not found' 
+          message: 'User not found'
         });
       }
     }
@@ -504,20 +493,20 @@ router.post('/change-password', verifyToken, async (req, res, next) => {
     // Verify current password
     const isMatch = await bcrypt.compare(currentPassword, user.password);
     if (!isMatch) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
         data: null,
-        message: 'Current password is incorrect' 
+        message: 'Current password is incorrect'
       });
     }
 
     // Check if new password is same as current password
     const isSamePassword = await bcrypt.compare(newPassword, user.password);
     if (isSamePassword) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
         data: null,
-        message: 'New password must be different from current password' 
+        message: 'New password must be different from current password'
       });
     }
 
@@ -527,8 +516,8 @@ router.post('/change-password', verifyToken, async (req, res, next) => {
 
     // Update password in database
     if (dbConnection && dbConnection.useMongoDB) {
-      await UserMongo.findByIdAndUpdate(req.userId, { 
-        password: hashedPassword 
+      await UserMongo.findByIdAndUpdate(req.userId, {
+        password: hashedPassword
       });
     } else {
       await UserMock.updatePassword(req.userId, hashedPassword);
@@ -540,7 +529,7 @@ router.post('/change-password', verifyToken, async (req, res, next) => {
       message: 'Password changed successfully'
     });
   } catch (error) {
-    console.error('Change password error:', error);
+    logger.error('Change password error:', error);
     next(error);
   }
 });
@@ -549,7 +538,7 @@ router.post('/change-password', verifyToken, async (req, res, next) => {
 router.post('/2fa/enable', verifyToken, async (req, res, next) => {
   try {
     const dbConnection = req.app.get('dbConnection');
-    
+
     let user;
     if (dbConnection && dbConnection.useMongoDB) {
       user = await UserMongo.findById(req.userId);
@@ -583,7 +572,7 @@ router.post('/2fa/enable', verifyToken, async (req, res, next) => {
       message: '2FA setup initialized. Scan QR code with your authenticator app.'
     });
   } catch (error) {
-    console.error('Enable 2FA error:', error);
+    logger.error('Enable 2FA error:', error);
     next(error);
   }
 });
@@ -619,7 +608,7 @@ router.post('/2fa/verify', verifyToken, async (req, res, next) => {
 
     // Save the secret and enable 2FA
     const dbConnection = req.app.get('dbConnection');
-    
+
     if (dbConnection && dbConnection.useMongoDB) {
       await UserMongo.findByIdAndUpdate(req.userId, {
         twoFactorEnabled: true,
@@ -640,7 +629,7 @@ router.post('/2fa/verify', verifyToken, async (req, res, next) => {
       message: 'Two-factor authentication enabled successfully'
     });
   } catch (error) {
-    console.error('Verify 2FA error:', error);
+    logger.error('Verify 2FA error:', error);
     next(error);
   }
 });
@@ -659,7 +648,7 @@ router.post('/2fa/disable', verifyToken, async (req, res, next) => {
     }
 
     const dbConnection = req.app.get('dbConnection');
-    
+
     let user;
     if (dbConnection && dbConnection.useMongoDB) {
       user = await UserMongo.findById(req.userId);
@@ -703,7 +692,7 @@ router.post('/2fa/disable', verifyToken, async (req, res, next) => {
       message: 'Two-factor authentication disabled successfully'
     });
   } catch (error) {
-    console.error('Disable 2FA error:', error);
+    logger.error('Disable 2FA error:', error);
     next(error);
   }
 });
@@ -712,7 +701,7 @@ router.post('/2fa/disable', verifyToken, async (req, res, next) => {
 router.get('/2fa/status', verifyToken, async (req, res, next) => {
   try {
     const dbConnection = req.app.get('dbConnection');
-    
+
     let user;
     if (dbConnection && dbConnection.useMongoDB) {
       user = await UserMongo.findById(req.userId).select('twoFactorEnabled');
@@ -736,7 +725,7 @@ router.get('/2fa/status', verifyToken, async (req, res, next) => {
       message: '2FA status retrieved'
     });
   } catch (error) {
-    console.error('Get 2FA status error:', error);
+    logger.error('Get 2FA status error:', error);
     next(error);
   }
 });

@@ -4,6 +4,7 @@ const MessageMock = require('../mockdb/messageDB');
 const UserMongo = require('../models/User');
 const UserMock = require('../mockdb/userDB');
 const { validateMessage, validateMessageId, checkValidation } = require('../middleware/validationMiddleware');
+const logger = require('../utils/logger');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 
@@ -94,7 +95,7 @@ router.post('/', verifyToken, validateMessage, checkValidation, async (req, res)
       message: 'Message sent successfully'
     });
   } catch (error) {
-    console.error('Send message error:', error);
+    logger.error('Send message error:', error);
     res.status(500).json({
       success: false,
       data: null,
@@ -127,15 +128,15 @@ router.get('/conversations', verifyToken, async (req, res) => {
 
       // Group by conversation
       const conversationMap = new Map();
-      
+
       messages.forEach(msg => {
         const conversationId = msg.conversationId;
-        
+
         if (!conversationMap.has(conversationId)) {
-          const otherUser = msg.sender._id.toString() === req.userId 
-            ? msg.receiver 
+          const otherUser = msg.sender._id.toString() === req.userId
+            ? msg.receiver
             : msg.sender;
-          
+
           conversationMap.set(conversationId, {
             conversationId,
             otherUser,
@@ -144,10 +145,10 @@ router.get('/conversations', verifyToken, async (req, res) => {
             messages: []
           });
         }
-        
+
         const conv = conversationMap.get(conversationId);
         conv.messages.push(msg);
-        
+
         // Count unread messages
         if (msg.receiver._id.toString() === req.userId && !msg.isRead) {
           conv.unreadCount++;
@@ -158,19 +159,19 @@ router.get('/conversations', verifyToken, async (req, res) => {
     } else {
       // Mock database implementation
       const messages = await MessageMock.find({});
-      const userMessages = messages.filter(msg => 
+      const userMessages = messages.filter(msg =>
         (msg.sender === req.userId || msg.receiver === req.userId) &&
         !msg.deletedBy.includes(req.userId)
       );
 
       const conversationMap = new Map();
-      
+
       userMessages.forEach(msg => {
         const conversationId = msg.conversationId;
-        
+
         if (!conversationMap.has(conversationId)) {
           const otherUserId = msg.sender === req.userId ? msg.receiver : msg.sender;
-          
+
           conversationMap.set(conversationId, {
             conversationId,
             otherUserId,
@@ -179,10 +180,10 @@ router.get('/conversations', verifyToken, async (req, res) => {
             messages: []
           });
         }
-        
+
         const conv = conversationMap.get(conversationId);
         conv.messages.push(msg);
-        
+
         if (msg.receiver === req.userId && !msg.isRead) {
           conv.unreadCount++;
         }
@@ -197,7 +198,7 @@ router.get('/conversations', verifyToken, async (req, res) => {
       message: 'Conversations retrieved successfully'
     });
   } catch (error) {
-    console.error('Get conversations error:', error);
+    logger.error('Get conversations error:', error);
     res.status(500).json({
       success: false,
       data: null,
@@ -223,7 +224,7 @@ router.get('/conversation/:userId', verifyToken, async (req, res) => {
 
     if (useMongoDB) {
       const conversationId = MessageMongo.generateConversationId(req.userId, userId);
-      
+
       totalMessages = await MessageMongo.countDocuments({
         conversationId,
         deletedBy: { $nin: [req.userId] }
@@ -241,12 +242,12 @@ router.get('/conversation/:userId', verifyToken, async (req, res) => {
     } else {
       const conversationId = MessageMock.generateConversationId(req.userId, userId);
       const allMessages = await MessageMock.find({ conversationId });
-      
+
       messages = allMessages
         .filter(msg => !msg.deletedBy.includes(req.userId))
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
         .slice((page - 1) * limit, page * limit);
-      
+
       totalMessages = messages.length;
     }
 
@@ -264,7 +265,7 @@ router.get('/conversation/:userId', verifyToken, async (req, res) => {
       message: 'Messages retrieved successfully'
     });
   } catch (error) {
-    console.error('Get conversation messages error:', error);
+    logger.error('Get conversation messages error:', error);
     res.status(500).json({
       success: false,
       data: null,
@@ -288,7 +289,7 @@ router.put('/:messageId/read', verifyToken, validateMessageId, checkValidation, 
 
     if (useMongoDB) {
       message = await MessageMongo.findById(messageId);
-      
+
       if (!message) {
         return res.status(404).json({
           success: false,
@@ -311,7 +312,7 @@ router.put('/:messageId/read', verifyToken, validateMessageId, checkValidation, 
       }
     } else {
       message = await MessageMock.findById(messageId);
-      
+
       if (!message) {
         return res.status(404).json({
           success: false,
@@ -343,7 +344,7 @@ router.put('/:messageId/read', verifyToken, validateMessageId, checkValidation, 
       message: 'Message marked as read'
     });
   } catch (error) {
-    console.error('Mark message as read error:', error);
+    logger.error('Mark message as read error:', error);
     res.status(500).json({
       success: false,
       data: null,
@@ -367,7 +368,7 @@ router.delete('/:messageId', verifyToken, validateMessageId, checkValidation, as
 
     if (useMongoDB) {
       message = await MessageMongo.findById(messageId);
-      
+
       if (!message) {
         return res.status(404).json({
           success: false,
@@ -397,7 +398,7 @@ router.delete('/:messageId', verifyToken, validateMessageId, checkValidation, as
       }
     } else {
       message = await MessageMock.findById(messageId);
-      
+
       if (!message) {
         return res.status(404).json({
           success: false,
@@ -434,7 +435,7 @@ router.delete('/:messageId', verifyToken, validateMessageId, checkValidation, as
       message: 'Message deleted successfully'
     });
   } catch (error) {
-    console.error('Delete message error:', error);
+    logger.error('Delete message error:', error);
     res.status(500).json({
       success: false,
       data: null,
@@ -475,7 +476,7 @@ router.get('/unread/count', verifyToken, async (req, res) => {
       message: 'Unread count retrieved successfully'
     });
   } catch (error) {
-    console.error('Get unread count error:', error);
+    logger.error('Get unread count error:', error);
     res.status(500).json({
       success: false,
       data: null,
@@ -497,7 +498,7 @@ router.put('/conversation/:userId/read-all', verifyToken, async (req, res) => {
 
     if (useMongoDB) {
       const conversationId = MessageMongo.generateConversationId(req.userId, userId);
-      
+
       await MessageMongo.updateMany(
         {
           conversationId,
@@ -514,7 +515,7 @@ router.put('/conversation/:userId/read-all', verifyToken, async (req, res) => {
     } else {
       const conversationId = MessageMock.generateConversationId(req.userId, userId);
       const messages = await MessageMock.find({ conversationId });
-      
+
       for (const msg of messages) {
         if (msg.receiver === req.userId && !msg.isRead) {
           await MessageMock.updateOne(
@@ -531,7 +532,7 @@ router.put('/conversation/:userId/read-all', verifyToken, async (req, res) => {
       message: 'All messages marked as read'
     });
   } catch (error) {
-    console.error('Mark all as read error:', error);
+    logger.error('Mark all as read error:', error);
     res.status(500).json({
       success: false,
       data: null,

@@ -3,6 +3,8 @@
  * Handles 404 and 500 errors consistently across the API
  */
 
+const logger = require('../utils/logger');
+
 // 404 Not Found Handler
 const notFound = (req, res, next) => {
   res.status(404).json({
@@ -15,7 +17,7 @@ const notFound = (req, res, next) => {
 // Global Error Handler (500 Internal Server Error)
 const errorHandler = (err, req, res, next) => {
   // Log error for debugging
-  console.error('Error:', err.stack);
+  logger.error('Error:', { message: err.message, stack: err.stack });
 
   // Determine status code
   const statusCode = res.statusCode === 200 ? 500 : res.statusCode;

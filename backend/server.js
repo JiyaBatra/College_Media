@@ -4,6 +4,7 @@ const dotenv = require('dotenv');
 const path = require('path');
 const { initDB } = require('./config/db');
 const { notFound, errorHandler } = require('./middleware/errorMiddleware');
+const logger = require('./utils/logger');
 
 dotenv.config();
 
@@ -30,38 +31,38 @@ app.get('/', (req, res) => {
 // Initialize database connection and start server
 const startServer = async () => {
   let dbConnection;
-  
+
   try {
     dbConnection = await initDB();
-    
+
     // Set the database connection globally so routes can access it
     app.set('dbConnection', dbConnection);
-    
-    console.log('Database initialized successfully');
+
+    logger.info('Database initialized successfully');
   } catch (error) {
-    console.error('Database initialization error:', error);
+    logger.error('Database initialization error:', error);
     // Don't exit, just use mock database
     dbConnection = { useMongoDB: false, mongoose: null };
     app.set('dbConnection', dbConnection);
-    
-    console.log('Using file-based database as fallback');
+
+    logger.warn('Using file-based database as fallback');
   }
-  
+
   // Import and register routes
   app.use('/api/auth', require('./routes/auth'));
   app.use('/api/users', require('./routes/users'));
   app.use('/api/messages', require('./routes/messages'));
   app.use('/api/account', require('./routes/account'));
-  
+
   // 404 Not Found Handler (must be after all routes)
   app.use(notFound);
-  
+
   // Global Error Handler (must be last)
   app.use(errorHandler);
-  
+
   // Start the server
   app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+    logger.info(`Server is running on port ${PORT}`);
   });
 };
 
