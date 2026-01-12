@@ -54,12 +54,10 @@ const { client: metricsClient } = require("./utils/metrics");
 
 /* ============================================================
    🔁 BACKGROUND JOBS
-============================================================ */
 const sampleJob = require("./jobs/sampleJob");
 
 /* ============================================================
    🌱 ENVIRONMENT SETUP
-============================================================ */
 dotenv.config();
 
 const ENV = process.env.NODE_ENV || "development";
@@ -81,7 +79,6 @@ app.disable("x-powered-by");
 
 /* ============================================================
    🔐 SECURITY HEADERS (HELMET)
-============================================================ */
 app.use(helmet(securityHeaders(ENV)));
 
 /* ============================================================
@@ -109,7 +106,6 @@ app.use(express.urlencoded({ extended: true, limit: "2mb" }));
 
 /* ============================================================
    📊 REQUEST METRICS
-============================================================ */
 app.use(metricsMiddleware);
 
 /* ============================================================
@@ -196,7 +192,6 @@ app.get("/", (req, res) => {
 
 /* ============================================================
    📈 METRICS ENDPOINT (SECURED)
-============================================================ */
 app.get("/metrics", async (req, res) => {
   const token = req.headers["x-metrics-token"];
 
@@ -226,7 +221,6 @@ app.get("/metrics", async (req, res) => {
 
 /* ============================================================
    🔁 BACKGROUND JOB BOOTSTRAP
-============================================================ */
 const startBackgroundJobs = () => {
   logger.info("Bootstrapping background jobs");
 
