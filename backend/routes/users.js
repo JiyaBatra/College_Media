@@ -8,7 +8,9 @@ const multer = require('multer');
 const path = require('path');
 const logger = require('../utils/logger');
 const { apiLimiter } = require('../middleware/rateLimitMiddleware');
+
 const { isValidName, isValidBio, isValidEmail } = require('../utils/validators');
+const { cacheMiddleware, invalidateCache } = require('../middleware/cacheMiddleware');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'college_media_secret_key';
 
@@ -65,7 +67,7 @@ const upload = multer({
 });
 
 // Get current user profile
-router.get('/profile', verifyToken, async (req, res, next) => {
+router.get('/profile', verifyToken, cacheMiddleware({ prefix: 'user-profile', ttl: 300 }), async (req, res, next) => {
   try {
     // Get database connection from app
     const dbConnection = req.app.get('dbConnection');
@@ -110,7 +112,7 @@ router.get('/profile', verifyToken, async (req, res, next) => {
 });
 
 // Update user profile
-router.put('/profile', verifyToken, validateProfileUpdate, checkValidation, async (req, res, next) => {
+router.put('/profile', verifyToken, validateProfileUpdate, checkValidation, invalidateCache(['user-profile::userId']), async (req, res, next) => {
   try {
     const { firstName, lastName, bio } = req.body;
 
@@ -191,7 +193,7 @@ router.put('/profile', verifyToken, validateProfileUpdate, checkValidation, asyn
 });
 
 // Upload profile picture
-router.post('/profile-picture', verifyToken, upload.single('profilePicture'), async (req, res, next) => {
+router.post('/profile-picture', verifyToken, upload.single('profilePicture'), invalidateCache(['user-profile::userId']), async (req, res, next) => {
   try {
     if (!req.file) {
       return res.status(400).json({
@@ -257,7 +259,11 @@ router.post('/profile-picture', verifyToken, upload.single('profilePicture'), as
 });
 
 // Get user by username (for viewing other profiles)
-router.get('/profile/:username', verifyToken, async (req, res, next) => {
+router.get('/profile/:username', verifyToken, cacheMiddleware({
+  prefix: 'user-profile-public',
+  ttl: 300,
+  keyGenerator: (req) => `cache:user-profile-public:${req.params.username}`
+}), async (req, res, next) => {
   try {
     const { username } = req.params;
 
@@ -307,7 +313,11 @@ router.get('/profile/:username', verifyToken, async (req, res, next) => {
 });
 
 // Get user's posts
-router.get('/profile/:username/posts', verifyToken, async (req, res, next) => {
+router.get('/profile/:username/posts', verifyToken, cacheMiddleware({
+  prefix: 'user-posts-public',
+  ttl: 60,
+  keyGenerator: (req) => `cache:user-posts-public:${req.params.username}`
+}), async (req, res, next) => {
   try {
     const { username } = req.params;
 
@@ -363,7 +373,7 @@ router.get('/profile/:username/posts', verifyToken, async (req, res, next) => {
 });
 
 // Update profile settings (email, privacy, etc.)
-router.put('/profile/settings', verifyToken, async (req, res, next) => {
+router.put('/profile/settings', verifyToken, invalidateCache(['user-profile::userId']), async (req, res, next) => {
   try {
     const { email, isPrivate, notificationSettings } = req.body;
 
@@ -421,7 +431,7 @@ router.put('/profile/settings', verifyToken, async (req, res, next) => {
 });
 
 // Get profile stats (followers, following, posts count)
-router.get('/profile/stats', verifyToken, async (req, res, next) => {
+router.get('/profile/stats', verifyToken, cacheMiddleware({ prefix: 'user-stats', ttl: 300 }), async (req, res, next) => {
   try {
     // Get database connection from app
     const dbConnection = req.app.get('dbConnection');
@@ -536,7 +546,7 @@ router.post('/profile/:username/follow', verifyToken, async (req, res, next) => 
 });
 
 // Delete profile picture
-router.delete('/profile-picture', verifyToken, async (req, res, next) => {
+router.delete('/profile-picture', verifyToken, invalidateCache(['user-profile::userId']), async (req, res, next) => {
   try {
     // Get database connection from app
     const dbConnection = req.app.get('dbConnection');

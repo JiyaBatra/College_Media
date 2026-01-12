@@ -1,38 +1,13 @@
 const rateLimit = require('express-rate-limit');
 const RedisStore = require('rate-limit-redis').default;
-const Redis = require('ioredis');
-const logger = require('../utils/logger');
+const redisClient = require('../utils/redisClient');
 
-// Initialize Redis Client
-let redisClient;
 let store;
 
-const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
-const ENABLE_REDIS = process.env.ENABLE_REDIS === 'true';
-
-if (ENABLE_REDIS) {
-    try {
-        redisClient = new Redis(REDIS_URL, {
-            enableOfflineQueue: false,
-            connectTimeout: 2000,
-            retryStrategy: (times) => Math.min(times * 50, 2000), // Exponential backoff max 2s
-        });
-
-        redisClient.on('error', (err) => {
-            logger.warn('Redis connection error (Rate Limiting falling back to Memory):', err.message);
-        });
-
-        redisClient.on('connect', () => {
-            logger.info('Connected to Redis for Rate Limiting');
-        });
-
-        store = new RedisStore({
-            sendCommand: (...args) => redisClient.call(...args),
-        });
-    } catch (error) {
-        logger.error('Failed to initialize Redis client:', error);
-        // Fallback to memory store (default for express-rate-limit when store is undefined)
-    }
+if (redisClient) {
+    store = new RedisStore({
+        sendCommand: (...args) => redisClient.call(...args),
+    });
 }
 
 // Helper to get client IP

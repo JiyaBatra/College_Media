@@ -7,7 +7,10 @@ const { validateMessage, validateMessageId, checkValidation } = require('../midd
 const logger = require('../utils/logger');
 const { apiLimiter } = require('../middleware/rateLimitMiddleware');
 const { isValidMessageContent, isValidURL, isValidObjectId } = require('../utils/validators');
+
 const { parsePaginationParams, paginateQuery, paginateArray } = require('../utils/pagination');
+const { cacheMiddleware, invalidateCache } = require('../middleware/cacheMiddleware');
+const cache = require('../utils/cache');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 
@@ -46,7 +49,7 @@ const verifyToken = (req, res, next) => {
  * @desc    Send a new message
  * @access  Private
  */
-router.post('/', verifyToken, validateMessage, checkValidation, async (req, res) => {
+router.post('/', verifyToken, validateMessage, checkValidation, invalidateCache(['user-conversations::userId', 'user-unread-count::userId']), async (req, res) => {
   try {
     const { receiver, content, messageType, attachmentUrl } = req.body;
 
@@ -123,6 +126,19 @@ router.post('/', verifyToken, validateMessage, checkValidation, async (req, res)
       message = await MessageMock.create(messageData);
     }
 
+    // Invalidate receiver's cache manually
+    try {
+      await Promise.all([
+        cache.del(cache.generateKey('user-conversations', receiver)),
+        cache.del(cache.generateKey('user-unread-count', receiver)),
+        // Invalidate conversation messages for both
+        cache.invalidatePattern(`cache:user-conversation-messages:${req.userId}:*`),
+        cache.invalidatePattern(`cache:user-conversation-messages:${receiver}:*`)
+      ]);
+    } catch (cacheErr) {
+      logger.warn('Failed to invalidate receiver cache:', cacheErr);
+    }
+
     res.status(201).json({
       success: true,
       data: message,
@@ -143,7 +159,7 @@ router.post('/', verifyToken, validateMessage, checkValidation, async (req, res)
  * @desc    Get all conversations for the authenticated user
  * @access  Private
  */
-router.get('/conversations', verifyToken, async (req, res) => {
+router.get('/conversations', verifyToken, cacheMiddleware({ prefix: 'user-conversations', ttl: 60 }), async (req, res) => {
   try {
     const dbConnection = req.app.get('dbConnection');
     const useMongoDB = dbConnection?.useMongoDB;
@@ -246,7 +262,7 @@ router.get('/conversations', verifyToken, async (req, res) => {
  * @desc    Get all messages in a conversation with a specific user
  * @access  Private
  */
-router.get('/conversation/:userId', verifyToken, async (req, res) => {
+router.get('/conversation/:userId', verifyToken, cacheMiddleware({ prefix: 'user-conversation-messages', ttl: 30 }), async (req, res) => {
   try {
     const { userId } = req.params;
     const { page = 1, limit = 50 } = req.query;
@@ -313,7 +329,7 @@ router.get('/conversation/:userId', verifyToken, async (req, res) => {
  * @desc    Mark a message as read
  * @access  Private
  */
-router.put('/:messageId/read', verifyToken, validateMessageId, checkValidation, async (req, res) => {
+router.put('/:messageId/read', verifyToken, validateMessageId, checkValidation, invalidateCache(['user-conversations::userId', 'user-unread-count::userId']), async (req, res) => {
   try {
     const { messageId } = req.params;
     const dbConnection = req.app.get('dbConnection');
@@ -392,7 +408,7 @@ router.put('/:messageId/read', verifyToken, validateMessageId, checkValidation, 
  * @desc    Delete a message (soft delete for user)
  * @access  Private
  */
-router.delete('/:messageId', verifyToken, validateMessageId, checkValidation, async (req, res) => {
+router.delete('/:messageId', verifyToken, validateMessageId, checkValidation, invalidateCache(['user-conversations::userId']), async (req, res) => {
   try {
     const { messageId } = req.params;
     const dbConnection = req.app.get('dbConnection');
@@ -483,7 +499,7 @@ router.delete('/:messageId', verifyToken, validateMessageId, checkValidation, as
  * @desc    Get count of unread messages
  * @access  Private
  */
-router.get('/unread/count', verifyToken, async (req, res) => {
+router.get('/unread/count', verifyToken, cacheMiddleware({ prefix: 'user-unread-count', ttl: 300 }), async (req, res) => {
   try {
     const dbConnection = req.app.get('dbConnection');
     const useMongoDB = dbConnection?.useMongoDB;
@@ -524,7 +540,7 @@ router.get('/unread/count', verifyToken, async (req, res) => {
  * @desc    Mark all messages in a conversation as read
  * @access  Private
  */
-router.put('/conversation/:userId/read-all', verifyToken, async (req, res) => {
+router.put('/conversation/:userId/read-all', verifyToken, invalidateCache(['user-conversations::userId', 'user-unread-count::userId']), async (req, res) => {
   try {
     const { userId } = req.params;
     const dbConnection = req.app.get('dbConnection');
