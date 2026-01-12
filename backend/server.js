@@ -11,6 +11,7 @@ const { notFound, errorHandler } = require('./middleware/errorMiddleware');
 const logger = require('./utils/logger');
 const { globalLimiter } = require('./middleware/rateLimitMiddleware');
 const { sanitizeAll, validateContentType, preventParameterPollution } = require('./middleware/sanitizationMiddleware');
+const { setupSwagger } = require('./config/swagger');
 require('./utils/redisClient'); // Initialize Redis client
 
 /* ============================================================
@@ -193,10 +194,17 @@ app.get("/", (req, res) => {
   });
 });
 
-/* ============================================================
-   📈 METRICS ENDPOINT (SECURED)
-app.get("/metrics", async (req, res) => {
-  const token = req.headers["x-metrics-token"];
+// Setup Swagger API documentation
+setupSwagger(app);
+
+// Import and register routes
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/users', require('./routes/users'));
+app.use('/api/messages', require('./routes/messages'));
+app.use('/api/account', require('./routes/account'));
+
+// 404 Not Found Handler (must be after all routes)
+app.use(notFound);
 
   if (ENV === "production" && token !== METRICS_TOKEN) {
     logger.warn("Unauthorized metrics access", {

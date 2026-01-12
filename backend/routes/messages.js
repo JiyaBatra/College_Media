@@ -50,9 +50,34 @@ const verifyToken = (req, res, next) => {
 };
 
 /**
- * @route   POST /api/messages
- * @desc    Send a new message
- * @access  Private
+ * @swagger
+ * /api/messages:
+ *   post:
+ *     summary: Send a new message
+ *     tags: [Messages]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/MessageInput'
+ *     responses:
+ *       201:
+ *         description: Message sent successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean }
+ *                 data: { $ref: '#/components/schemas/Message' }
+ *                 message: { type: string }
+ *       400:
+ *         $ref: '#/components/responses/ValidationError'
+ *       401:
+ *         $ref: '#/components/responses/UnauthorizedError'
  */
 router.post('/', verifyToken, validateMessage, checkValidation, invalidateCache(['user-conversations::userId', 'user-unread-count::userId']), async (req, res) => {
   try {
