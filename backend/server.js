@@ -13,7 +13,7 @@ require('./utils/redisClient'); // Initialize Redis client
 
 dotenv.config();
 
-const app = express();
+const ENV = process.env.NODE_ENV || "development";
 const PORT = process.env.PORT || 5000;
 
 // Middleware
@@ -50,12 +50,65 @@ app.use(preventParameterPollution(['tags', 'categories'])); // Allow arrays for 
 // Static file serving for uploaded images
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Basic route
-app.get('/', (req, res) => {
+/* ------------------
+   🐢 SLOW REQUEST LOGGER
+------------------ */
+app.use((req, res, next) => {
+  const start = Date.now();
+
+  res.on("finish", () => {
+    const duration = Date.now() - start;
+    if (duration > 5000) {
+      logger.warn("Slow request detected", {
+        method: req.method,
+        url: req.originalUrl,
+        durationMs: duration,
+      });
+    }
+  });
+
+  next();
+});
+
+/* ------------------
+   🔁 API VERSIONING
+------------------ */
+app.use((req, res, next) => {
+  req.apiVersion = req.headers["x-api-version"] || "v1";
+  res.setHeader("X-API-Version", req.apiVersion);
+  next();
+});
+
+/* ------------------
+   ⏱️ RATE LIMITING
+------------------ */
+app.use("/api", slidingWindowLimiter);
+if (FEATURE_FLAGS.ENABLE_STRICT_RATE_LIMITING) {
+  app.use("/api", globalLimiter);
+}
+
+/* ------------------
+   📁 STATIC FILES
+------------------ */
+app.use(
+  "/uploads",
+  express.static(path.join(__dirname, "uploads"), {
+    maxAge: "1h",
+    etag: true,
+  })
+);
+
+/* ------------------
+   ❤️ HEALTH CHECK
+------------------ */
+app.get("/", (req, res) => {
   res.json({
     success: true,
-    data: null,
-    message: 'College Media API is running!'
+    message: "College Media API running",
+    env: ENV,
+    uptime: process.uptime(),
+    memory: process.memoryUsage(),
+    cpu: os.loadavg(),
   });
 });
 
