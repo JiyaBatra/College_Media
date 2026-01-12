@@ -26,6 +26,11 @@ const otpStore = new Map();
 /* ---------------- REGISTER ---------------- */
 router.post("/register", validateRegister, checkValidation, async (req, res, next) => {
   try {
+    console.log('\ud83d\udce5 Registration request received:', { 
+      ...req.body, 
+      password: req.body.password ? '***' : undefined 
+    });
+    
     const { username, email, password, firstName, lastName } = req.body;
     const dbConnection = req.app.get("dbConnection");
 

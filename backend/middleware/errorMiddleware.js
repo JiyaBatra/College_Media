@@ -16,8 +16,11 @@ const notFound = (req, res, next) => {
 
 // ❌ Global Error Handler
 const errorHandler = (err, req, res, next) => {
-  // Log error (always)
-  console.error("Error:", err);
+  // Log error with more details
+  console.error("❌ Error occurred:");
+  console.error("  Path:", req.method, req.originalUrl);
+  console.error("  Message:", err.message);
+  console.error("  Stack:", err.stack);
 
   // Default status code
   const statusCode = err.statusCode || res.statusCode || 500;
