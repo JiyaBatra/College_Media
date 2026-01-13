@@ -1,15 +1,17 @@
 /**
  * ============================================================
  *  College Media – Backend Server (HARDENED)
- * ------------------------------------------------------------
- *  ✔ Refresh Token Ready
- *  ✔ Cookie Security Enabled
- *  ✔ Startup Self-Checks
- *  ✔ Token Abuse Protection
- *  ✔ Graceful Shutdown
- *  ✔ Observability Enabled
+ * ============================================================
+ * ✔ Refresh Token Ready
+ * ✔ Cookie Security Enabled
+ * ✔ Startup Self-Checks
+ * ✔ Token Abuse Protection
+ * ✔ Graceful Shutdown
+ * ✔ Observability Enabled
  * ============================================================
  */
+
+"use strict";
 
 /* ============================================================
    📦 CORE DEPENDENCIES
@@ -21,13 +23,16 @@ const path = require("path");
 const http = require("http");
 const os = require("os");
 const cookieParser = require("cookie-parser");
+const helmet = require("helmet");
+const compression = require("compression");
+const passport = require("passport");
 
 /* ============================================================
    🔧 INTERNAL IMPORTS
-const helmet = require("helmet");
-const securityHeaders = require("./config/securityHeaders");
+============================================================ */
 const { initDB } = require("./config/db");
 const { notFound, errorHandler } = require("./middleware/errorMiddleware");
+const logger = require("./utils/logger");
 
 const resumeRoutes = require("./routes/resume");
 const uploadRoutes = require("./routes/upload");
@@ -35,104 +40,62 @@ const uploadRoutes = require("./routes/upload");
 const {
   globalLimiter,
   authLimiter,
-  otpLimiter,
   searchLimiter,
   adminLimiter,
 } = require("./middleware/rateLimiter");
 
 const { slidingWindowLimiter } = require("./middleware/slidingWindowLimiter");
 const { warmUpCache } = require("./utils/cache");
-const logger = require("./utils/logger");
 
 /* ============================================================
-   📊 OBSERVABILITY & METRICS
+   📊 OBSERVABILITY
 ============================================================ */
 const metricsMiddleware = require("./middleware/metrics.middleware");
 const { client: metricsClient } = require("./utils/metrics");
 
 /* ============================================================
-   🔁 BACKGROUND JOBS
-const sampleJob = require("./jobs/sampleJob");
-
-/* ============================================================
-   🌱 ENVIRONMENT SETUP
+   🌱 ENV SETUP
+============================================================ */
 dotenv.config();
 
-// 🔥 HARD PROOF TEST - Check if MISTRAL_API_KEY is loaded
-console.log("=" .repeat(60));
-console.log("🔍 ENVIRONMENT VARIABLE CHECK:");
-console.log("MISTRAL_API_KEY:", process.env.MISTRAL_API_KEY ? `EXISTS (length: ${process.env.MISTRAL_API_KEY.length})` : "❌ NOT FOUND");
-console.log("=" .repeat(60));
+const ENV = process.env.NODE_ENV || "development";
+const PORT = process.env.PORT || 5000;
+const TRUST_PROXY = process.env.TRUST_PROXY === "true";
+const METRICS_TOKEN = process.env.METRICS_TOKEN || "metrics-secret";
 
+const COOKIE_SECURE = ENV === "production";
+const COOKIE_DOMAIN = process.env.COOKIE_DOMAIN || undefined;
+
+/* ============================================================
+   🔍 STARTUP ENV CHECK
+============================================================ */
+logger.info("Environment check", {
+  nodeEnv: ENV,
+  mistralKeyLoaded: Boolean(process.env.MISTRAL_API_KEY),
+});
+
+/* ============================================================
+   🚀 APP INIT
+============================================================ */
 const app = express();
 const server = http.createServer(app);
-const PORT = process.env.PORT || 5000;
-const METRICS_TOKEN = process.env.METRICS_TOKEN || "metrics-secret";
-const TRUST_PROXY = process.env.TRUST_PROXY === "true";
 
-// Middleware
-app.use(helmet()); // Set security headers
-app.use(helmet.contentSecurityPolicy({
-  directives: {
-    defaultSrc: ["'self'"],
-    scriptSrc: ["'self'", "'unsafe-inline'"], // Allow inline scripts for now (if needed for development)
-    styleSrc: ["'self'", "'unsafe-inline'"],
-    imgSrc: ["'self'", "data:", "https:"], // Allow images from https sources
-    connectSrc: ["'self'"],
-  },
-}));
-app.use(compression()); // Compress all responses
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(passport.initialize());
-
-// Apply global rate limiter
-// conditional check for test environment to avoid rate limits during testing
-if (process.env.NODE_ENV !== 'test') {
-  app.use(globalLimiter);
-}
-
+if (TRUST_PROXY) app.set("trust proxy", 1);
 app.disable("x-powered-by");
 
 /* ============================================================
-   🔐 SECURITY HEADERS
-app.use(helmet(securityHeaders(ENV)));
-
-/* ============================================================
-   🌍 CORS CONFIG (REFRESH TOKEN SAFE)
+   🔐 SECURITY MIDDLEWARE
 ============================================================ */
-app.use(
-  cors({
-    origin: true,
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: [
-      "Content-Type",
-      "Authorization",
-      "X-API-Version",
-      "X-Metrics-Token",
-    ],
-  })
-);
-
-/* ============================================================
-   🍪 COOKIE PARSER (REFRESH TOKEN SUPPORT)
-============================================================ */
+app.use(helmet());
+app.use(compression());
+app.use(cors({ origin: true, credentials: true }));
 app.use(cookieParser());
-
-/* ============================================================
-   📦 BODY PARSERS
-============================================================ */
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true, limit: "2mb" }));
+app.use(passport.initialize());
 
 /* ============================================================
-   📊 REQUEST METRICS
-app.use(metricsMiddleware);
-
-/* ============================================================
-   ⏱️ REQUEST TIMEOUT GUARD
+   ⏱️ TIMEOUT PROTECTION
 ============================================================ */
 app.use((req, res, next) => {
   req.setTimeout(10 * 60 * 1000);
@@ -145,39 +108,40 @@ app.use((req, res, next) => {
 ============================================================ */
 app.use((req, res, next) => {
   const start = Date.now();
-
   res.on("finish", () => {
     const duration = Date.now() - start;
     if (duration > 5000) {
-      logger.warn("Slow request detected", {
+      logger.warn("Slow request", {
         method: req.method,
         url: req.originalUrl,
-        durationMs: duration,
+        duration,
         status: res.statusCode,
       });
     }
   });
-
   next();
 });
 
 /* ============================================================
-   🔁 API VERSIONING
+   📊 METRICS
 ============================================================ */
-app.use((req, res, next) => {
-  req.apiVersion = req.headers["x-api-version"] || "v1";
-  res.setHeader("X-API-Version", req.apiVersion);
-  next();
+app.use(metricsMiddleware);
+
+app.get("/metrics", async (req, res) => {
+  if (ENV === "production" && req.headers["x-metrics-token"] !== METRICS_TOKEN) {
+    return res.status(403).json({ success: false });
+  }
+  res.set("Content-Type", metricsClient.register.contentType);
+  res.end(await metricsClient.register.metrics());
 });
 
 /* ============================================================
    ⏱️ RATE LIMITING
 ============================================================ */
-app.use("/api", slidingWindowLimiter);
-
-if (ENV === "production") {
-  app.use("/api", globalLimiter);
+if (ENV !== "test") {
+  app.use(globalLimiter);
 }
+app.use("/api", slidingWindowLimiter);
 
 /* ============================================================
    📁 STATIC FILES
@@ -191,12 +155,12 @@ app.use(
 );
 
 /* ============================================================
-   ❤️ HEALTH CHECK + AUTH SANITY
+   ❤️ HEALTH CHECK
 ============================================================ */
 app.get("/", (req, res) => {
   res.json({
     success: true,
-    message: "College Media API running",
+    service: "College Media API",
     env: ENV,
     uptime: process.uptime(),
     memory: process.memoryUsage(),
@@ -211,37 +175,29 @@ app.get("/", (req, res) => {
 });
 
 /* ============================================================
-   📈 METRICS (SECURED)
-
-  if (ENV === "production" && token !== METRICS_TOKEN) {
-    logger.warn("Unauthorized metrics access", { ip: req.ip });
-    return res.status(403).json({ success: false });
-  }
-
-  res.set("Content-Type", metricsClient.register.contentType);
-  res.end(await metricsClient.register.metrics());
-});
-
-/* ============================================================
-   🔁 BACKGROUND JOB BOOTSTRAP
-const startBackgroundJobs = () => {
-  setImmediate(async () => {
-    try {
-      await sampleJob.run({ shouldFail: false });
-      logger.info("Background job executed");
-    } catch (err) {
-      logger.error("Background job failed", err);
-    }
-  });
-};
-
-/* ============================================================
-   🚀 START SERVER
+   🔐 ROUTES
 ============================================================ */
-let dbConnection = null;
+app.use("/api/auth", authLimiter, require("./routes/auth"));
+app.use("/api/users", require("./routes/users"));
+app.use("/api/search", searchLimiter, require("./routes/search"));
+app.use("/api/admin", adminLimiter, require("./routes/admin"));
+app.use("/api/resume", resumeRoutes);
+app.use("/api/upload", uploadRoutes);
+app.use("/api/messages", require("./routes/messages"));
+app.use("/api/account", require("./routes/account"));
+
+/* ============================================================
+   ❌ ERROR HANDLING
+============================================================ */
+app.use(notFound);
+app.use(errorHandler);
+
+/* ============================================================
+   🚦 START SERVER
+============================================================ */
+let dbConnection;
 
 const startServer = async () => {
-  /* 🔍 STARTUP SELF CHECK */
   if (!process.env.ACCESS_TOKEN_SECRET || !process.env.REFRESH_TOKEN_SECRET) {
     logger.critical("Auth secrets missing");
     process.exit(1);
@@ -249,6 +205,7 @@ const startServer = async () => {
 
   try {
     dbConnection = await initDB();
+    logger.info("Database connected");
   } catch (err) {
     logger.critical("DB connection failed", err);
     process.exit(1);
@@ -261,38 +218,22 @@ const startServer = async () => {
     });
   });
 
-  startBackgroundJobs();
-
-  /* 🔐 ROUTES */
-  app.use("/api/auth", authLimiter, require("./routes/auth"));
-  app.use("/api/users", require("./routes/users"));
-  app.use("/api/search", searchLimiter, require("./routes/search"));
-  app.use("/api/admin", adminLimiter, require("./routes/admin"));
-  app.use("/api/resume", resumeRoutes);
-  app.use("/api/upload", uploadRoutes);
-  app.use("/api/messages", require("./routes/messages"));
-  app.use("/api/account", require("./routes/account"));
-
-  app.use(notFound);
-  app.use(errorHandler);
-
-  server.keepAliveTimeout = 120000;
-  server.headersTimeout = 130000;
-
   server.listen(PORT, () => {
-    logger.info(`Server running`, { port: PORT, env: ENV });
+    logger.info("Server running", { port: PORT, env: ENV });
   });
 };
 
-// Start server only if run directly
-if (require.main === module) {
-  connectDB().then(() => {
-    initSocket(server);
+/* ============================================================
+   🧨 GRACEFUL SHUTDOWN
+============================================================ */
+const shutdown = async (signal) => {
+  logger.warn("Shutdown signal received", { signal });
 
   server.close(async () => {
     if (dbConnection?.mongoose) {
       await dbConnection.mongoose.connection.close(false);
     }
+    logger.info("Shutdown complete");
     process.exit(0);
   });
 
@@ -303,7 +244,10 @@ process.on("SIGINT", shutdown);
 process.on("SIGTERM", shutdown);
 
 /* ============================================================
-   🧨 PROCESS SAFETY
-
-/* ============================================================
    ▶️ BOOTSTRAP
+============================================================ */
+if (require.main === module) {
+  startServer();
+}
+
+module.exports = app;
