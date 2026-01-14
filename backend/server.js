@@ -217,6 +217,7 @@ app.get("/", (req, res) => {
 ============================================================ */
 app.use("/api/auth", authLimiter, require("./routes/auth"));
 app.use("/api/users", require("./routes/users"));
+app.use("/api/streams", require("./routes/streams"));
 app.use("/api/search", searchLimiter, require("./routes/search"));
 app.use("/api/admin", adminLimiter, require("./routes/admin"));
 app.use("/api/resume", resumeRoutes);
