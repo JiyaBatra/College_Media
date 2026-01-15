@@ -33,9 +33,10 @@
     "mongo-sanitize": "^1.1.0",
     "mongoose": "^8.0.0",
     "multer": "^1.4.5-lts.1",
+    "openai": "^6.16.0",
     "otplib": "^13.1.1",
     "path": "^0.12.7",
-    "pdf-parse": "^1.1.1",
+    "pdf-parse": "^1.1.4",
     "pdf-to-png-converter": "^3.11.0",
     "pdf2pic": "^3.2.0",
     "pdfkit": "^0.17.2",
@@ -44,6 +45,7 @@
     "resend": "^6.7.0",
     "speakeasy": "^2.0.0",
     "tesseract.js": "^7.0.0",
+    "uuid": "^13.0.0",
     "web-push": "^3.6.7"
   },
   "devDependencies": {

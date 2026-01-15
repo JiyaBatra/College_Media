@@ -227,6 +227,7 @@ app.use("/api/keys", require("./routes/keys"));
 app.use("/api/geo", require("./routes/geo"));
 app.use("/api/notifications", require("./routes/notifications"));
 app.use("/api/credentials", require("./routes/credentials"));
+app.use("/api/tutor", require("./routes/tutor"));
 app.use("/api/account", require("./routes/account"));
 
 /* ============================================================
