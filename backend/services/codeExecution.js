@@ -1,67 +1,48 @@
-const axios = require('axios');
+const DockerSandbox = require('./dockerSandbox');
 const logger = require('../utils/logger');
-
-// Piston API Configuration
-const PISTON_API_URL = process.env.PISTON_API_URL || 'https://emkc.org/api/v2/piston';
 
 class CodeExecutionService {
     /**
-     * Execute code using Piston API
-     * @param {string} language - Programming language (javascript, python, cpp, etc.)
-     * @param {string} code - Source code
-     * @param {string} version - Language version (optional)
+     * Execute code using local Docker Sandbox
+     * @param {string} language 
+     * @param {string} code 
      */
-    static async execute(language, code, version = '*') {
+    static async execute(language, code) {
         try {
-            // Map common names to Piston runtimes
-            const runtime = this.mapLanguage(language);
+            const mappedLang = this.mapLanguage(language);
 
-            const response = await axios.post(`${PISTON_API_URL}/execute`, {
-                language: runtime.language,
-                version: runtime.version,
-                files: [
-                    {
-                        content: code
-                    }
-                ]
-            });
-
-            const { run } = response.data;
+            const result = await DockerSandbox.run(mappedLang, code);
 
             return {
-                success: true,
-                output: run.output,
-                statusCode: run.code,
-                memory: run.memory,
-                cpuTime: run.cpu_time
+                success: result.success,
+                output: result.output || result.error, // Return error in output if failed
+                statusCode: result.statusCode || (result.success ? 0 : 1)
             };
 
         } catch (error) {
             logger.error('Code execution failed:', error.message);
             return {
                 success: false,
-                error: error.response?.data?.message || error.message
+                error: error.message
             };
         }
     }
 
     /**
-     * Map frontend language names to Piston runtimes
+     * Map frontend language names to Sandbox runtimes
      */
     static mapLanguage(lang) {
         const map = {
-            'javascript': { language: 'javascript', version: '18.15.0' },
-            'js': { language: 'javascript', version: '18.15.0' },
-            'node': { language: 'javascript', version: '18.15.0' },
-            'python': { language: 'python', version: '3.10.0' },
-            'py': { language: 'python', version: '3.10.0' },
-            'cpp': { language: 'c++', version: '10.2.0' },
-            'c++': { language: 'c++', version: '10.2.0' },
-            'java': { language: 'java', version: '15.0.2' },
-            'go': { language: 'go', version: '1.16.2' }
+            'javascript': 'javascript',
+            'js': 'javascript',
+            'node': 'javascript',
+            'python': 'python',
+            'py': 'python',
+            'cpp': 'cpp',
+            'c++': 'cpp'
         };
 
-        return map[lang.toLowerCase()] || { language: lang, version: '*' };
+        return map[lang.toLowerCase()] || lang.toLowerCase();
     }
 }
 
