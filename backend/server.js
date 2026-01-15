@@ -62,7 +62,8 @@ const { client: metricsClient } = require("./utils/metrics");
 /* ============================================================
    🌱 ENV SETUP
 ============================================================ */
-dotenv.config();
+const envPath = process.env.NODE_ENV === 'test' ? '.env.test' : '.env';
+dotenv.config({ path: envPath });
 
 const ENV = process.env.NODE_ENV || "development";
 const PORT = process.env.PORT || 5000;
