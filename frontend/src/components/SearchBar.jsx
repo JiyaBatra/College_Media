@@ -26,6 +26,7 @@ const SearchBar = ({ className = '' }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState({});
   // Optimized: Increased debounce delay slightly to 400ms for better performance
   const debouncedQuery = useDebounce(query, 400);
   const searchRef = useRef(null);
@@ -86,7 +87,17 @@ const SearchBar = ({ className = '' }) => {
     if (!searchQuery.trim()) return;
 
     addToSearchHistory(searchQuery);
-    navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
+
+    const params = new URLSearchParams({
+      q: searchQuery,
+      sortBy: filters.sortBy || 'relevance',
+      contentType: filters.contentType !== 'all' ? filters.contentType : undefined,
+      dateRange: filters.dateRange !== 'all' ? filters.dateRange : undefined
+    });
+    // Remove undefined keys
+    const queryString = params.toString().replace(/[^=&]+=(?:&|$)/g, "");
+
+    navigate(`/search?${queryString}`);
     setIsOpen(false);
     setQuery('');
   };
