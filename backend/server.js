@@ -252,7 +252,6 @@ app.use("/api/auth", distributedRateLimit('auth'), require("./routes/auth"));
 app.use("/api/users", require("./routes/users"));
 app.use("/api/streams", require("./routes/streams"));
 app.use("/api/search", distributedRateLimit('global'), require("./routes/search"));
-app.use("/api/analytics", require("./routes/analytics"));
 app.use("/api/collections", require("./routes/collections"));
 app.use("/api/admin", distributedRateLimit('admin'), require("./routes/admin"));
 app.use("/api/resume", resumeRoutes);
