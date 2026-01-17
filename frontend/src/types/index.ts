@@ -74,35 +74,25 @@ export interface Collection {
     updatedAt: string;
 }
 
-export interface TimeSlot {
-    _id: string;
-    start: string;
-    end: string;
-    isBooked: boolean;
+export type WhiteboardElementType = 'pencil' | 'rect' | 'circle' | 'text' | 'line';
+
+export interface WhiteboardElement {
+    id: string;
+    type: WhiteboardElementType;
+    points?: number[];
+    x?: number;
+    y?: number;
+    width?: number;
+    height?: number;
+    fill?: string;
+    stroke?: string;
+    strokeWidth?: number;
+    text?: string;
+    rotation?: number;
 }
 
-export interface Availability {
-    _id: string;
-    day: string;
-    slots: TimeSlot[];
-}
-
-export interface MentorProfile {
-    _id: string;
-    userId: User;
-    bio: string;
-    skills: string[];
-    major: string;
-    yearOfGraduation: number;
-    availability: Availability[];
-    pricing: {
-        isFree: boolean;
-        amount: number;
-        currency: string;
-    };
-    rating: {
-        average: number;
-        count: number;
-    };
-    matchScore?: number;
+export interface WhiteboardParticipant {
+    user: string | User;
+    joinedAt: string;
+    isDrawing: boolean;
 }
