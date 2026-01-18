@@ -278,6 +278,7 @@ app.use("/api/live", require("./routes/live"));
 app.use("/api/feed", require("./routes/recommendations"));
 app.use("/api/events", require("./routes/events"));
 app.use("/api/analytics", require("./routes/analytics"));
+app.use("/api/matchmaking", require("./routes/matchmaking"));
 app.use("/api/proctoring", require("./routes/proctoring"));
 app.use("/api/interview", require("./routes/interview"));
 app.use("/api/storage", require("./routes/storage"));

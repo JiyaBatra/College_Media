@@ -52,6 +52,7 @@ const Explore = lazy(() => import("../pages/Explore"));
 const Trending = lazy(() => import("../pages/Trending"));
 const Feed = lazy(() => import("../pages/Feed"));
 const StudyBuddyMatcher = lazy(() => import("../pages/StudyBuddyMatcher"));
+const Matchmaker = lazy(() => import("../pages/Matchmaker"));
 const InstructorDashboard = lazy(() => import("../pages/InstructorDashboard"));
 const ResumeBuilder = lazy(() => import("../pages/ResumeBuilder"));
 const ATSResume = lazy(() => import("../pages/ATSResume"));
@@ -444,6 +445,15 @@ const AppRoutes: React.FC<AppRoutesProps> = ({
           element={
             <LazyWrapper>
               <StudyBuddyMatcher />
+            </LazyWrapper>
+          }
+        />
+
+        <Route
+          path="matchmaker"
+          element={
+            <LazyWrapper>
+              <Matchmaker />
             </LazyWrapper>
           }
         />
