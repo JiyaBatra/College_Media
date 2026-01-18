@@ -30,7 +30,7 @@ const AdvancedSearchFilters: React.FC<AdvancedSearchFiltersProps> = ({ onFilterC
     }, [filters, onFilterChange]);
 
     const handleFilterChange = (filterType: string, value: string) => {
-        setFilters((prev: any) => ({
+        setFilters(prev => ({
             ...prev,
             [filterType]: value
         }));

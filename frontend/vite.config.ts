@@ -1,5 +1,6 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import { VitePWA } from "vite-plugin-pwa";
 import compression from "vite-plugin-compression";
 import { visualizer } from "rollup-plugin-visualizer";
 
@@ -9,6 +10,29 @@ export default defineConfig(({ command }) => {
   return {
     plugins: [
       react(),
+
+      // 🔹 PWA Plugin
+      VitePWA({
+        registerType: 'autoUpdate',
+        workbox: {
+          globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+          runtimeCaching: [
+            {
+              urlPattern: /^https:\/\/api\./i,
+              handler: 'NetworkFirst',
+              options: {
+                cacheName: 'api-cache',
+                expiration: {
+                  maxEntries: 10,
+                  maxAgeSeconds: 60 * 60 * 24 * 365 // 365 days
+                }
+              }
+            }
+          ]
+        },
+        includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
+        manifest: false, // Use existing manifest.json
+      }),
 
       // 🔹 Enable compression ONLY during build
       isBuild &&

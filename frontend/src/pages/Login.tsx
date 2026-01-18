@@ -22,8 +22,16 @@ const Login = () => {
       const response = await login(formData.email, formData.password);
       
       if (response.success) {
-        toast.success("Login successful!");
-        navigate("/feed");
+        // Check if MFA is required
+        if (response.requiresMFA) {
+          toast.success("Please enter your 2FA code");
+          navigate("/verify-mfa", { 
+            state: { userId: response.userId } 
+          });
+        } else {
+          toast.success("Login successful!");
+          navigate("/feed");
+        }
       } else {
         toast.error(response.message || "Login failed");
       }

@@ -117,6 +117,43 @@ class NotificationService {
             return null;
         }
     }
+
+    /**
+     * Initialize with Socket.io instance
+     */
+    static init(io) {
+        this.io = io;
+    }
+
+    /**
+     * Create and send a real-time notification
+     */
+    static async sendNotification(data) {
+        const Notification = require('../models/Notification');
+        try {
+            const { recipient, sender, type, post, comment, content } = data;
+
+            const notification = new Notification({
+                recipient,
+                sender,
+                type,
+                post,
+                comment,
+                content
+            });
+
+            await notification.save();
+            const populated = await notification.populate('sender', 'username profilePicture').execPopulate();
+
+            if (this.io) {
+                this.io.to(recipient.toString()).emit('notification', populated);
+            }
+
+            return populated;
+        } catch (error) {
+            logger.error('Failed to send notification:', error);
+        }
+    }
 }
 
 module.exports = NotificationService;

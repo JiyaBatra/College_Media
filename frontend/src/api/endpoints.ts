@@ -14,6 +14,14 @@ export const authApi = {
   getCurrentUser: () => apiClient.get('/auth/me'),
   updateProfile: (data: any) => apiClient.put('/auth/profile', data),
   changePassword: (data: any) => apiClient.put('/auth/password', data),
+  
+  // MFA endpoints
+  setupMFA: () => apiClient.post('/auth/2fa/setup'),
+  enableMFA: (data: { secret: string; token: string }) => apiClient.post('/auth/2fa/enable', data),
+  disableMFA: (data: { token: string }) => apiClient.post('/auth/2fa/disable', data),
+  verifyMFALogin: (data: { userId: string; token: string }) => apiClient.post('/auth/2fa/verify-login', data),
+  getMFAStatus: () => apiClient.get('/auth/2fa/status'),
+  regenerateBackupCodes: (data: { token: string }) => apiClient.post('/auth/2fa/regenerate-codes', data),
 };
 
 // Posts endpoints
@@ -104,6 +112,7 @@ export const searchApi = {
   getSuggestions: (query: string) => apiClient.get('/search/suggestions', { params: { q: query } }),
   getTrending: () => apiClient.get('/search/trending'),
 };
+
 // Messages endpoints
 export const messagesApi = {
   getConversations: () => apiClient.get('/messages/conversations'),
@@ -111,6 +120,7 @@ export const messagesApi = {
   send: (data: any) => apiClient.post('/messages/send', data),
   markAllAsRead: (userId: string) => apiClient.put(`/messages/read/${userId}`),
 };
+
 // Moderation endpoints
 export const moderationApi = {
   // Submit a report (regular users)
@@ -164,11 +174,63 @@ export const pollsApi = {
   delete: (id: string) => apiClient.delete(`/polls/${id}`),
 };
 
+// Collections endpoints
+export const collectionsApi = {
+  getAll: () => apiClient.get('/collections'),
+  create: (data: any) => apiClient.post('/collections', data),
+  addPost: (collectionId: string, postId: string) => apiClient.post('/collections/add-post', { collectionId, postId }),
+  removePost: (collectionId: string, postId: string) => apiClient.post('/collections/remove-post', { collectionId, postId }),
+  delete: (id: string) => apiClient.delete(`/collections/${id}`),
+};
+
+// Marketplace endpoints
+export const marketplaceApi = {
+  getProducts: (params: any) => apiClient.get('/marketplace/products', { params }),
+  getProduct: (id: string) => apiClient.get(`/marketplace/products/${id}`),
+  createProduct: (data: any) => apiClient.post('/marketplace/products', data),
+  updateProduct: (id: string, data: any) => apiClient.put(`/marketplace/products/${id}`, data),
+  deleteProduct: (id: string) => apiClient.delete(`/marketplace/products/${id}`),
+  createOrder: (productId: string) => apiClient.post('/marketplace/orders', { productId }),
+  getOrders: () => apiClient.get('/marketplace/orders'),
+  createPaymentIntent: (productId: string) => apiClient.post('/payment/create-payment-intent', { productId }),
+  confirmDelivery: (orderId: string) => apiClient.post(`/payment/confirm-delivery/${orderId}`),
+};
+
+// Collab endpoints
+export const collabApi = {
+  createDocument: (data: any) => apiClient.post('/collab/documents', data),
+  getDocuments: () => apiClient.get('/collab/documents'),
+  getDocument: (id: string) => apiClient.get(`/collab/documents/${id}`),
+  deleteDocument: (id: string) => apiClient.delete(`/collab/documents/${id}`),
+};
+
+// Events endpoints
+export const eventsApi = {
+  create: (data: any) => apiClient.post('/events', data),
+  getAll: () => apiClient.get('/events'),
+  getById: (id: string) => apiClient.get(`/events/${id}`),
+  purchaseTicket: (eventId: string, tierName: string) => apiClient.post(`/events/${eventId}/tickets`, { tierName }),
+  getMyTickets: () => apiClient.get('/events/tickets/my'),
+  verifyTicket: (token: string) => apiClient.post('/events/verify-ticket', { token }),
+};
+
+// Career Expo endpoints
+export const careerExpoApi = {
+  getBooths: () => apiClient.get('/career/booths'),
+  createBooth: (data: any) => apiClient.post('/career/booths', data),
+  getMySessions: () => apiClient.get('/career/sessions/my'),
+};
+
+// Credentials endpoints
+export const credentialsApi = {
+  getMy: () => apiClient.get('/credentials/my'),
+  verify: (id: string) => apiClient.get(`/credentials/verify/${id}`),
+  download: (id: string) => apiClient.get(`/credentials/${id}/download`, { responseType: 'blob' }),
+};
+
 // Analytics endpoints
 export const analyticsApi = {
-  getOverview: () => apiClient.get('/analytics/overview'),
-  getTopTags: () => apiClient.get('/analytics/top-tags'),
-  track: (data: any) => apiClient.post('/analytics/track', data),
+  getDashboard: () => apiClient.get('/analytics/dashboard'),
 };
 
 // Export all APIs
@@ -183,5 +245,11 @@ export default {
   messages: messagesApi,
   moderation: moderationApi,
   polls: pollsApi,
+  collections: collectionsApi,
+  marketplace: marketplaceApi,
+  collab: collabApi,
+  events: eventsApi,
+  careerExpo: careerExpoApi,
+  credentials: credentialsApi,
   analytics: analyticsApi,
 };

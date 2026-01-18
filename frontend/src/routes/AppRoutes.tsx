@@ -33,10 +33,14 @@ const Landing = lazy(() => import("../pages/Landing"));
 const Login = lazy(() => import("../pages/Login"));
 const Signup = lazy(() => import("../pages/Signup"));
 const ForgotPassword = lazy(() => import("../pages/ForgotPassword"));
+const SetupMFA = lazy(() => import("../pages/security/SetupMFA"));
+const VerifyMFA = lazy(() => import("../pages/security/VerifyMFA"));
 const NotificationCenter = lazy(() => import("../components/NotificationCenter"));
 const NotificationPreferences = lazy(() => import("../components/NotificationPreferences"));
 const SearchResults = lazy(() => import("../pages/SearchResults"));
+const GlobalSearch = lazy(() => import("../pages/GlobalSearch"));
 const ModerationDashboard = lazy(() => import("../pages/admin/ModerationDashboard"));
+const RoleManager = lazy(() => import("../pages/admin/RoleManager"));
 const ReportDetail = lazy(() => import("../pages/admin/ReportDetail"));
 const Settings = lazy(() => import("../pages/Settings"));
 const Profile = lazy(() => import("../pages/Profile"));
@@ -48,12 +52,20 @@ const Explore = lazy(() => import("../pages/Explore"));
 const Trending = lazy(() => import("../pages/Trending"));
 const Feed = lazy(() => import("../pages/Feed"));
 const StudyBuddyMatcher = lazy(() => import("../pages/StudyBuddyMatcher"));
+const Matchmaker = lazy(() => import("../pages/Matchmaker"));
 const InstructorDashboard = lazy(() => import("../pages/InstructorDashboard"));
 const ResumeBuilder = lazy(() => import("../pages/ResumeBuilder"));
-const AnalyticsDashboard = lazy(() => import("../pages/AnalyticsDashboard"));
 const ATSResume = lazy(() => import("../pages/ATSResume"));
 const AlumniResumeReview = lazy(() => import("../pages/AlumniResumeReview"));
 const AlumniConnect = lazy(() => import("../pages/AlumniConnect"));
+const Marketplace = lazy(() => import("../pages/Marketplace"));
+const CollabDashboard = lazy(() => import("../pages/CollabDashboard"));
+const CollabDoc = lazy(() => import("../pages/CollabDoc"));
+const EventsHub = lazy(() => import("../pages/EventsHub"));
+const CareerFair = lazy(() => import("../pages/CareerFair"));
+const CampusPulse = lazy(() => import("../pages/admin/CampusPulse"));
+const CredentialsWallet = lazy(() => import("../pages/CredentialsWallet"));
+const Verifier = lazy(() => import("../pages/Verifier"));
 const NotFound = lazy(() => import("../pages/NotFound"));
 
 interface ProtectedRouteProps {
@@ -152,6 +164,28 @@ const AppRoutes: React.FC<AppRoutesProps> = ({
       />
 
       <Route
+        path="/verify-mfa"
+        element={
+          user ? <Navigate to="/" replace /> : (
+            <LazyWrapper>
+              <VerifyMFA />
+            </LazyWrapper>
+          )
+        }
+      />
+
+      <Route
+        path="/setup-mfa"
+        element={
+          <ProtectedRoute>
+            <LazyWrapper>
+              <SetupMFA />
+            </LazyWrapper>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
         path="/learning"
         element={
           <LazyWrapper>
@@ -223,6 +257,17 @@ const AppRoutes: React.FC<AppRoutesProps> = ({
         />
 
         <Route
+          path="search/global"
+          element={
+            <ProtectedRoute>
+              <LazyWrapper>
+                <GlobalSearch />
+              </LazyWrapper>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
           path="notifications"
           element={
             <LazyWrapper>
@@ -241,20 +286,22 @@ const AppRoutes: React.FC<AppRoutesProps> = ({
         />
 
         <Route
-          path="analytics"
-          element={
-            <LazyWrapper>
-              <AnalyticsDashboard />
-            </LazyWrapper>
-          }
-        />
-
-        <Route
           path="admin/moderation"
           element={
             <LazyWrapper>
               <ModerationDashboard />
             </LazyWrapper>
+          }
+        />
+
+        <Route
+          path="admin/roles"
+          element={
+            <ProtectedRoute>
+              <LazyWrapper>
+                <RoleManager />
+              </LazyWrapper>
+            </ProtectedRoute>
           }
         />
 
@@ -403,6 +450,15 @@ const AppRoutes: React.FC<AppRoutesProps> = ({
         />
 
         <Route
+          path="matchmaker"
+          element={
+            <LazyWrapper>
+              <Matchmaker />
+            </LazyWrapper>
+          }
+        />
+
+        <Route
           path="instructor/dashboard"
           element={
             <LazyWrapper>
@@ -443,6 +499,79 @@ const AppRoutes: React.FC<AppRoutesProps> = ({
           element={
             <LazyWrapper>
               <AlumniConnect />
+            </LazyWrapper>
+          }
+        />
+
+        <Route
+          path="marketplace"
+          element={
+            <LazyWrapper>
+              <Marketplace />
+            </LazyWrapper>
+          }
+        />
+
+        <Route
+          path="collab/dashboard"
+          element={
+            <LazyWrapper>
+              <CollabDashboard />
+            </LazyWrapper>
+          }
+        />
+
+        <Route
+          path="collab/docs/:docId"
+          element={
+            <LazyWrapper>
+              <CollabDoc />
+            </LazyWrapper>
+          }
+        />
+
+        <Route
+          path="events/*"
+          element={
+            <LazyWrapper>
+              <EventsHub />
+            </LazyWrapper>
+          }
+        />
+
+        <Route
+          path="career-expo"
+          element={
+            <LazyWrapper>
+              <CareerFair />
+            </LazyWrapper>
+          }
+        />
+
+        <Route
+          path="credentials"
+          element={
+            <LazyWrapper>
+              <CredentialsWallet />
+            </LazyWrapper>
+          }
+        />
+
+        {/* Public Verifier Route - Outside MainLayout? Or keep it inside for navbar */}
+        <Route
+          path="verify/:id"
+          element={
+            <LazyWrapper>
+              <Verifier />
+            </LazyWrapper>
+          }
+        />
+
+        <Route
+          path="admin/pulse"
+          element={
+            <LazyWrapper>
+              <CampusPulse />
             </LazyWrapper>
           }
         />

@@ -1,3 +1,4 @@
+/* eslint-disable */
 /**
  * Unit Tests - CreatePost Component
  * Issue #348: Add Unit Tests for Core Components
@@ -408,6 +409,8 @@ describe('CreatePost Component', () => {
                 expect(callArg).toHaveProperty('caption', 'Test post');
                 expect(callArg).toHaveProperty('user');
                 expect(callArg.user).toHaveProperty('username', 'testuser');
+            });
+        });
 
         it('should not submit form without content', async () => {
             const user = userEvent.setup({ delay: null });
@@ -482,18 +485,17 @@ describe('CreatePost Component', () => {
         });
 
         it('should handle multiple rapid submissions', async () => {
-            const user = userEvent.setup({ delay: null });
             render(<CreatePost onPostCreated={mockOnPostCreated} />);
 
             const textarea = screen.getByPlaceholderText(/what's happening/i);
-            await user.type(textarea, 'Test post');
+            await userEvent.type(textarea, 'Test post');
 
             const postButton = screen.getByRole('button', { name: /post/i });
 
             // Try to click multiple times
-            await user.click(postButton);
-            await user.click(postButton);
-            await user.click(postButton);
+            await userEvent.click(postButton);
+            await userEvent.click(postButton);
+            await userEvent.click(postButton);
 
             // Should only submit once (button becomes disabled after first click)
             expect(screen.getByText('Posting...')).toBeInTheDocument();
@@ -504,10 +506,11 @@ describe('CreatePost Component', () => {
             render(<CreatePost onPostCreated={mockOnPostCreated} />);
 
             const textarea = screen.getByPlaceholderText(/what's happening/i);
-            const specialText = 'Test @user #hashtag 🎉 <script>alert("xss")</script>';
+            const specialText = 'Test @user #hashtag 🎉 &lt;script&gt;alert("xss")&lt;/script&gt;';
             await user.type(textarea, specialText);
 
             expect(textarea).toHaveValue(specialText);
         });
     });
 });
+

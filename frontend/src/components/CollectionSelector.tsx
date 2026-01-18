@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Icon } from '@iconify/react';
 import { useCollections, useCreateCollection } from '../hooks/useCollections';
 
@@ -6,7 +6,13 @@ import { useCollections, useCreateCollection } from '../hooks/useCollections';
  * CollectionSelector Component
  * Dropdown for selecting a collection when saving a post
  */
-const CollectionSelector = ({ postId, onClose, onSelect }) => {
+interface CollectionSelectorProps {
+  postId: string;
+  onClose: () => void;
+  onSelect?: (collectionId: string) => void;
+}
+
+const CollectionSelector: React.FC<CollectionSelectorProps> = ({ postId, onClose, onSelect }) => {
   const { collections, addPostToCollection } = useCollections();
   const { create, isCreating } = useCreateCollection();
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -15,24 +21,24 @@ const CollectionSelector = ({ postId, onClose, onSelect }) => {
 
   const filteredCollections = searchQuery.trim()
     ? collections.filter(c =>
-        c.name.toLowerCase().includes(searchQuery.toLowerCase())
-      )
+      c.name.toLowerCase().includes(searchQuery.toLowerCase())
+    )
     : collections;
 
-  const handleSelectCollection = async (collectionId) => {
+  const handleSelectCollection = async (collectionId: string) => {
     await addPostToCollection(collectionId, postId);
     onSelect?.(collectionId);
     onClose();
   };
 
-  const handleCreateAndSave = async (e) => {
+  const handleCreateAndSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCollectionName.trim()) return;
 
     try {
       const newCollection = await create(newCollectionName.trim());
-      await addPostToCollection(newCollection.id, postId);
-      onSelect?.(newCollection.id);
+      await addPostToCollection(newCollection._id, postId);
+      onSelect?.(newCollection._id);
       onClose();
     } catch (error) {
       console.error('Error creating collection:', error);
@@ -40,16 +46,16 @@ const CollectionSelector = ({ postId, onClose, onSelect }) => {
   };
 
   return (
-    <div className="absolute right-0 mt-2 w-72 bg-bg-secondary dark:bg-gray-800 rounded-lg shadow-lg border border-border dark:border-gray-700 z-50 max-h-96 overflow-hidden flex flex-col">
+    <div className="absolute right-0 mt-2 w-72 bg-bg-secondary rounded-xl shadow-lg border border-border z-50 max-h-96 overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
       {/* Header */}
-      <div className="p-4 border-b border-border dark:border-gray-700">
+      <div className="p-4 border-b border-border">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold text-text-primary dark:text-white">
+          <h3 className="font-semibold text-text-primary">
             Save to Collection
           </h3>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            className="text-text-muted hover:text-text-primary transition-colors"
           >
             <Icon icon="mdi:close" className="w-5 h-5" />
           </button>
@@ -59,14 +65,14 @@ const CollectionSelector = ({ postId, onClose, onSelect }) => {
         <div className="relative">
           <Icon
             icon="mdi:magnify"
-            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5"
+            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-muted w-5 h-5"
           />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search collections..."
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-bg-secondary dark:bg-gray-700 text-text-primary dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full pl-10 pr-4 py-2 border border-border rounded-lg bg-bg-tertiary text-text-primary text-sm focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none transition-all"
           />
         </div>
       </div>
@@ -74,42 +80,45 @@ const CollectionSelector = ({ postId, onClose, onSelect }) => {
       {/* Collections List */}
       <div className="flex-1 overflow-y-auto p-2">
         {filteredCollections.length === 0 ? (
-          <div className="p-4 text-center text-text-muted dark:text-gray-400 text-sm">
+          <div className="p-4 text-center text-text-muted text-sm italic">
             {searchQuery ? 'No collections found' : 'No collections yet'}
           </div>
         ) : (
           filteredCollections.map((collection) => {
-            const isPostInCollection = collection.postIds?.includes(postId);
-            
+            const isPostInCollection = (collection.posts as any[]).some(p =>
+              (typeof p === 'string' ? p : p._id) === postId
+            );
+
             return (
               <button
-                key={collection.id}
-                onClick={() => handleSelectCollection(collection.id)}
+                key={collection._id}
+                onClick={() => handleSelectCollection(collection._id)}
                 disabled={isPostInCollection}
-                className={`w-full flex items-center justify-between p-3 rounded-lg text-left transition-colors ${
-                  isPostInCollection
-                    ? 'bg-blue-50 dark:bg-blue-900/20 cursor-not-allowed'
-                    : 'hover:bg-gray-100 dark:hover:bg-gray-700'
-                }`}
+                className={`w-full flex items-center justify-between p-3 rounded-lg text-left transition-colors ${isPostInCollection
+                    ? 'bg-brand-primary/5 cursor-not-allowed'
+                    : 'hover:bg-bg-tertiary'
+                  }`}
               >
                 <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <Icon
-                    icon={collection.isPublic ? 'mdi:folder-open' : 'mdi:folder'}
-                    className="w-5 h-5 text-gray-600 dark:text-gray-400 flex-shrink-0"
-                  />
+                  <div className={`p-2 rounded-lg bg-bg-secondary border border-border`}>
+                    <Icon
+                      icon={collection.isPublic ? 'mdi:folder-open' : 'mdi:folder'}
+                      className="w-5 h-5 text-brand-primary"
+                    />
+                  </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-text-primary dark:text-white truncate">
+                    <p className="font-medium text-text-primary truncate">
                       {collection.name}
                     </p>
-                    <p className="text-xs text-text-muted dark:text-gray-400">
-                      {collection.postIds?.length || 0} post{collection.postIds?.length !== 1 ? 's' : ''}
+                    <p className="text-xs text-text-muted">
+                      {collection.posts.length} post{collection.posts.length !== 1 ? 's' : ''}
                     </p>
                   </div>
                 </div>
                 {isPostInCollection && (
                   <Icon
                     icon="mdi:check-circle"
-                    className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0"
+                    className="w-5 h-5 text-brand-primary flex-shrink-0"
                   />
                 )}
               </button>
@@ -119,7 +128,7 @@ const CollectionSelector = ({ postId, onClose, onSelect }) => {
       </div>
 
       {/* Create New Collection */}
-      <div className="border-t border-border dark:border-gray-700 p-3">
+      <div className="border-t border-border p-3 bg-bg-tertiary/30">
         {showCreateForm ? (
           <form onSubmit={handleCreateAndSave} className="space-y-2">
             <input
@@ -129,7 +138,7 @@ const CollectionSelector = ({ postId, onClose, onSelect }) => {
               placeholder="Collection name"
               autoFocus
               maxLength={50}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-bg-secondary dark:bg-gray-700 text-text-primary dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-border rounded-lg bg-bg-secondary text-text-primary text-sm focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary outline-none"
             />
             <div className="flex gap-2">
               <button
@@ -138,20 +147,17 @@ const CollectionSelector = ({ postId, onClose, onSelect }) => {
                   setShowCreateForm(false);
                   setNewCollectionName('');
                 }}
-                className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 text-text-secondary dark:text-gray-300 rounded-lg hover:bg-bg-primary dark:hover:bg-gray-700 transition-colors"
+                className="flex-1 px-3 py-2 text-sm border border-border text-text-secondary rounded-lg hover:bg-bg-tertiary transition-colors"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={!newCollectionName.trim() || isCreating}
-                className="flex-1 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="flex-1 px-3 py-2 text-sm bg-brand-primary text-white rounded-lg hover:bg-brand-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-medium"
               >
                 {isCreating ? (
-                  <>
-                    <Icon icon="mdi:loading" className="w-4 h-4 animate-spin" />
-                    Creating...
-                  </>
+                  <Icon icon="mdi:loading" className="w-4 h-4 animate-spin" />
                 ) : (
                   'Create & Save'
                 )}
@@ -161,7 +167,7 @@ const CollectionSelector = ({ postId, onClose, onSelect }) => {
         ) : (
           <button
             onClick={() => setShowCreateForm(true)}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm bg-brand-primary text-white rounded-lg hover:bg-brand-primary/90 transition-all font-medium shadow-sm hover:shadow-md"
           >
             <Icon icon="mdi:plus" className="w-5 h-5" />
             <span>Create New Collection</span>
@@ -173,4 +179,3 @@ const CollectionSelector = ({ postId, onClose, onSelect }) => {
 };
 
 export default CollectionSelector;
-

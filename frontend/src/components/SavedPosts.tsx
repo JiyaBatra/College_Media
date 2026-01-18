@@ -1,59 +1,30 @@
-import React from "react";
-import { useBookmark } from "../context/BookmarkContext";
+import React, { useState } from "react";
+import { useCollections } from "../hooks/useCollections";
+import { Icon } from "@iconify/react";
+import Post from "./Post";
+import { Collection, Post as IPost } from "../types";
 
-/**
- * SavedPosts Component
- *
- * Displays all posts that the user has bookmarked
- * Shows an empty state when no posts are saved
- *
- * @param {Object} props - Component props
- * @param {Array} props.posts - Array of all available posts
- * @returns {React.ReactElement} Saved posts view
- */
-const SavedPosts = ({ posts = [] }) => {
-  const { savedPosts, toggleBookmark } = useBookmark();
+const SavedPosts: React.FC = () => {
+  const { collections, loading } = useCollections();
+  const [selectedCollection, setSelectedCollection] = useState<Collection | null>(null);
 
-  // Filter posts to show only saved ones
-  const bookmarkedPosts = posts.filter((post) => savedPosts.includes(post.id));
-
-  const handleLike = (postId) => {
-    // This would typically update the like state
-    // For now, we'll just log it
-    console.log("Like toggled for post:", postId);
-  };
-
-  // Empty state when no saved posts
-  if (bookmarkedPosts.length === 0) {
+  if (loading) {
     return (
-      <div className="max-w-2xl mx-auto">
-        <div className="bg-bg-secondary rounded-lg shadow-md p-12 text-center">
-          <div className="mb-6">
-            <svg
-              className="w-24 h-24 mx-auto text-gray-300"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.5}
-                d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
-              />
-            </svg>
-          </div>
-          <h3 className="text-2xl font-bold text-text-primary mb-2">
-            No saved posts yet
-          </h3>
-          <p className="text-text-muted mb-6">
-            Posts you bookmark will appear here for easy access later
-          </p>
-          <a
-            href="/home"
-            className="inline-block bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
-          >
-            Browse Posts
+      <div className="flex items-center justify-center py-20">
+        <Icon icon="mdi:loading" className="w-10 h-10 animate-spin text-brand-primary" />
+      </div>
+    );
+  }
+
+  if (collections.length === 0) {
+    return (
+      <div className="max-w-2xl mx-auto py-12 px-4 text-center">
+        <div className="bg-bg-secondary rounded-2xl shadow-soft p-12 border border-border">
+          <Icon icon="mdi:bookmark-outline" className="w-20 h-20 mx-auto text-text-muted mb-4" />
+          <h3 className="text-2xl font-bold text-text-primary mb-2">No saved posts</h3>
+          <p className="text-text-muted mb-8">Start saving posts to organize them into collections.</p>
+          <a href="/" className="inline-flex items-center gap-2 bg-brand-primary text-white px-6 py-2.5 rounded-xl font-semibold hover:opacity-90 transition-all shadow-md">
+            Go to Feed
           </a>
         </div>
       </div>
@@ -61,153 +32,77 @@ const SavedPosts = ({ posts = [] }) => {
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
-      {/* Header */}
-      <div className="bg-bg-secondary rounded-lg shadow-md p-4 mb-6">
-        <h2 className="text-2xl font-bold text-text-primary">
-          Saved Posts
-          <span className="ml-2 text-lg text-text-muted">
-            ({bookmarkedPosts.length})
-          </span>
-        </h2>
-        <p className="text-gray-600 mt-1">Your bookmarked posts</p>
-      </div>
-
-      {/* Saved Posts List */}
-      <div className="space-y-6">
-        {bookmarkedPosts.map((post) => (
-          <div
-            key={post.id}
-            className="bg-bg-secondary rounded-lg shadow-md overflow-hidden"
+    <div className="max-w-4xl mx-auto py-6 px-4 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-text-primary">
+            {selectedCollection ? selectedCollection.name : "Your Collections"}
+          </h1>
+          <p className="text-text-muted mt-1">
+            {selectedCollection
+              ? selectedCollection.description || "Collection items"
+              : "Organize and browse your saved content"}
+          </p>
+        </div>
+        {selectedCollection && (
+          <button
+            onClick={() => setSelectedCollection(null)}
+            className="flex items-center gap-2 text-brand-primary font-medium hover:underline"
           >
-            {/* Post Header */}
-            <div className="flex items-center p-4">
-              <img
-                src={post.user.profilePicture}
-                alt={post.user.username}
-                className="w-10 h-10 rounded-full object-cover mr-3"
-              />
-              <div className="flex-1">
-                <h3 className="font-semibold text-text-primary">
-                  {post.user.username}
-                </h3>
-                <p className="text-xs text-text-muted">{post.timestamp}</p>
-              </div>
-            </div>
+            <Icon icon="mdi:chevron-left" /> Back to Collections
+          </button>
+        )}
+      </header>
 
-            {/* Post Image */}
-            <div className="relative">
-              <img
-                src={post.imageUrl}
-                alt="Post"
-                className="w-full h-auto object-cover"
-              />
-            </div>
-
-            {/* Post Actions */}
-            <div className="p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex space-x-4">
-                  {/* Like Button */}
-                  <button
-                    onClick={() => handleLike(post.id)}
-                    className={`flex items-center ${
-                      post.liked ? "text-red-500" : "text-text-secondary"
-                    }`}
-                  >
-                    <svg
-                      className={`w-6 h-6 ${post.liked ? "fill-current" : ""}`}
-                      viewBox="0 0 24 24"
-                    >
-                      <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-                    </svg>
-                  </button>
-
-                  {/* Comment Button */}
-                  <button className="text-text-secondary">
-                    <svg
-                      className="w-6 h-6"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                      />
-                    </svg>
-                  </button>
-
-                  {/* Share Button */}
-                  <button className="text-text-secondary">
-                    <svg
-                      className="w-6 h-6"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
-                      />
-                    </svg>
-                  </button>
-                </div>
-
-                {/* Bookmark Button - Already saved */}
-                <button
-                  onClick={() => toggleBookmark(post.id)}
-                  className="bookmark-btn bookmarked"
-                  title="Remove from saved"
-                >
-                  <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
-                    <path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z" />
-                  </svg>
-                </button>
-              </div>
-
-              {/* Likes */}
-              <p className="font-semibold text-text-primary mb-1">
-                {post.likes} likes
-              </p>
-
-              {/* Caption */}
-              <div className="mb-2">
-                <span className="font-semibold text-text-primary mr-2">
-                  {post.user.username}
-                </span>
-                <span className="text-text-secondary">{post.caption}</span>
-              </div>
-
-              {/* Comments */}
-              {post.comments > 0 && (
-                <button className="text-text-muted text-sm mb-2">
-                  View all {post.comments} comments
-                </button>
-              )}
-
-              {/* Add Comment */}
-              <div className="flex items-center mt-3 pt-3 border-t border-gray-100">
-                <input
-                  type="text"
-                  placeholder="Add a comment..."
-                  className="flex-1 border-0 focus:ring-0 text-sm"
+      {!selectedCollection ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {collections.map((col) => (
+            <div
+              key={col._id}
+              onClick={() => setSelectedCollection(col)}
+              className="group bg-bg-secondary rounded-2xl border border-border overflow-hidden hover:border-brand-primary/50 transition-all cursor-pointer shadow-soft hover:shadow-lg"
+            >
+              <div className="h-32 bg-bg-tertiary flex items-center justify-center relative overflow-hidden">
+                <div className="absolute inset-0 opacity-10" style={{ backgroundColor: col.color }} />
+                <Icon
+                  icon={col.isPublic ? "mdi:folder-open" : "mdi:folder"}
+                  className="w-16 h-16 text-brand-primary group-hover:scale-110 transition-transform duration-300"
                 />
-                <button className="text-blue-500 font-semibold text-sm">
-                  Post
-                </button>
+              </div>
+              <div className="p-4">
+                <div className="flex items-center justify-between mb-1">
+                  <h3 className="font-bold text-text-primary truncate">{col.name}</h3>
+                  <span className="text-xs bg-bg-tertiary px-2 py-1 rounded-full font-medium text-text-muted">
+                    {col.posts.length}
+                  </span>
+                </div>
+                {col.description && (
+                  <p className="text-xs text-text-muted line-clamp-1">{col.description}</p>
+                )}
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {(selectedCollection.posts as IPost[]).length > 0 ? (
+            (selectedCollection.posts as IPost[]).map((p) => (
+              <Post
+                key={p._id}
+                post={p}
+                onCopyLink={() => { }}
+                copiedLink={null}
+              />
+            ))
+          ) : (
+            <div className="bg-bg-secondary rounded-2xl p-12 text-center border border-dashed border-border">
+              <p className="text-text-muted italic">This collection is empty</p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
 
 export default SavedPosts;
-
