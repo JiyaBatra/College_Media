@@ -39,11 +39,17 @@ A full-stack social media platform built for college students to connect, share 
    npm install
    ```
 
-3. Create a `.env` file in the backend directory with the following variables:
+3. Create a `.env` file in the backend directory with the following variables (refer to `.env.example` for a template):
+
+   - **PORT**: The port number on which the server will run. Defaults to 5000 if not specified.
+   - **MONGODB_URI**: The connection string for your MongoDB database. Use a local MongoDB instance or a cloud service like MongoDB Atlas. Defaults to `mongodb://localhost:27017/college-media` if not specified.
+   - **JWT_SECRET**: A secret key used for signing JSON Web Tokens (JWT) for authentication. This should be a strong, random string to ensure security. Change this in production to a unique value.
+
+   Example `.env` file:
    ```
-   MONGODB_URI=mongodb://localhost:27017/college-media
-   JWT_SECRET=your_jwt_secret_here
    PORT=5000
+   MONGODB_URI=mongodb://localhost:27017/college-media
+   JWT_SECRET=your_secure_jwt_secret_here
    ```
 
 4. Start the backend server:
@@ -101,6 +107,7 @@ college-media/
 │   │   └── posts.js
 │   ├── package.json
 │   ├── server.js
+│   ├── .env.example
 │   └── .env (create this file)
 ├── frontend/
 │   ├── src/
